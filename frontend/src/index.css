@@ -1,3 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * TAO foundation base styles (Boardroom Navy design system).
+ * Applies the foundation surface + text tokens, crisp font smoothing, and a
+ * reduced-motion safeguard for the design-system animations. No network
+ * web-font @import — the sans/mono stacks are system/ui fonts (offline-first).
+ */
+@layer base {
+  html {
+    /* system/ui sans stack from tailwind.config.js fontFamily.sans */
+    font-family: theme("fontFamily.sans");
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-surface text-content antialiased;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tabular figures for the data-dense probability board. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Brand-accent focus ring for keyboard users. */
+  :focus-visible {
+    outline: none;
+    @apply shadow-focus;
+  }
+
+  /* Respect the user's motion preference: disable the design-system
+   * micro-interactions (pulse highlight, shimmer, rise-in) and transitions. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
