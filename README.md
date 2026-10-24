@@ -39,6 +39,60 @@ condition opens a detail view with:
 - **sources** — curated references bundled with the app, augmented by live
   PubMed citations when the network allows.
 
+## Boardroom-quality design system
+
+TAO is presented through a single, disciplined design direction called
+**"Boardroom Navy"** — a refined deep-navy executive-analytics palette defined
+as design tokens in `frontend/tailwind.config.js` and consumed consistently
+across every surface. The aesthetic is calm, authoritative, data-dense but
+uncluttered, with strong typographic hierarchy and restrained color.
+
+The guiding principle is that **color encodes meaning, never decoration**:
+
+- **Probability magnitude** — the leading condition uses the confident brand
+  (sapphire) accent; near-leaders cool off and long-shots recede into muted ink,
+  so the eye reads the ranking instantly.
+- **Can't-miss / risk tier** — a distinct critical (red) family is reserved for
+  emergencies that must not be missed, so they stay visually prominent even when
+  another condition leads.
+- **Present vs denied findings** — asserted findings use a present (green)
+  family, explicitly ruled-out findings use a muted denied (rose) family.
+
+Numeric figures use tabular numerals, elevation is subtle (no neon glows), and
+all motion is short, purposeful, and respects `prefers-reduced-motion`.
+
+## Decision-support features
+
+Layered on top of the deterministic engine, the board column reads as headline
+intelligence:
+
+- **Suggested next question** — a prominent, deterministic recommendation of the
+  single most useful unasked finding. The engine picks the finding whose signed
+  weights most **separate** the current leading conditions (plain arithmetic, no
+  LLM), and explains which leaders it would pull apart. It updates live as the
+  consultation narrows, and shows a calm "no further discriminating question"
+  state when nothing is left to ask.
+- **Confidence / certainty meter** — a visible, evidence-scaled indicator
+  ("based on N findings — low / medium / high confidence"). It is driven by how
+  much evidence has accumulated, so an early high probability on thin evidence
+  deliberately reads as **low** confidence, reinforcing "decision support, not a
+  diagnosis".
+- **Multiple scenarios** — a clean scenario selector in the header switches
+  between three scripted consultations: **chest pain → ACS**, **headache →
+  migraine vs. subarachnoid hemorrhage** (the can't-miss red flag stays on the
+  radar then recedes as it is denied), and a **late-twist anti-anchoring** case
+  where a late finding dramatically reshuffles the board. Switching a scenario
+  rebuilds the player, resets playback, and scores against that scenario's
+  condition pool.
+- **Findings chips rail** — a live strip that fills in as the consultation
+  streams, splitting findings into **present** (green) and **ruled out** (muted
+  rose) so the accumulated evidence is legible at a glance.
+- **Cinematic live reshuffle** — the board animates with a smooth hand-rolled
+  FLIP reorder (no animation library), a brief highlight **pulse** on cards that
+  changed meaningfully, a signed **delta badge** (e.g. "▲ +12%" / "▼ -8%"), and a
+  brief visual **link** between the triggering transcript line on the right and
+  the card that moved on the left. All motion respects `prefers-reduced-motion`.
+
 ## How to run
 
 ```bash
@@ -68,7 +122,11 @@ microphone, fully offline in Chrome**:
   signed weight of every asserted finding, applies the opposite sign for denied
   findings, clamps to non-negative, and normalizes so probabilities sum to ~1.0.
   Identical input always yields identical output, and every probability is
-  traceable to specific findings and weights.
+  traceable to specific findings and weights. The **suggested-next-question**
+  selection (`nextQuestion.ts`) and the **confidence / certainty** derivation
+  (`confidence.ts`) are likewise pure, deterministic plain code — no LLM, no
+  network — so the same input always produces the same recommendation and the
+  same confidence band.
 - **PubMed E-utilities as progressive enhancement** — `frontend/src/tao/pubmed.ts`
   layers a few live PubMed citations on top of the bundled references using the
   public NCBI `esearch`/`esummary` endpoints with **no API key**. Every call is
@@ -82,21 +140,33 @@ microphone, fully offline in Chrome**:
   optional and fully guarded in try/catch, so a missing or blocked Web Speech
   API never throws or breaks the demo.
 
-## Demo script (summary)
+## Demo scenarios
 
-A fictional patient, "Alex Rivera" (58), presents with chest pain over roughly a
-two-minute consultation:
+Three scripted, fictional (PII-free) consultations are selectable from the
+header, each demonstrating a different strength of the board:
 
-1. **~0–30s** — undifferentiated chest pain on exertion with risk factors;
-   acute coronary syndrome and stable angina lead while can't-miss emergencies
-   stay visible.
-2. **~30–75s** — radiation to the arm, sweating, nausea and breathlessness pull
-   acute coronary syndrome clearly ahead.
-3. **~75–120s** — pulmonary-embolism features (leg swelling, a recent flight)
-   are explored and the board narrows; reflux is explicitly ruled out.
+- **Chest pain → ACS** — "Alex Rivera" (58) presents with chest pain over
+  roughly a two-minute consultation. Undifferentiated exertional chest pain with
+  risk factors puts acute coronary syndrome and stable angina ahead while
+  can't-miss emergencies stay visible; radiation to the arm, sweating, nausea
+  and breathlessness pull acute coronary syndrome clearly ahead; then
+  pulmonary-embolism features (leg swelling, a recent flight) are explored, the
+  board narrows, and reflux is explicitly ruled out.
+- **Headache → migraine vs. subarachnoid hemorrhage** — a headache trending
+  toward migraine while the doctor explicitly probes the red-flag features
+  (thunderclap onset, worst-headache-of-life, neck stiffness, fever). As the
+  patient denies them, the can't-miss subarachnoid hemorrhage and meningitis
+  stay on the radar and then recede — showing safe exclusion, not anchoring.
+- **Late-twist (anti-anchoring)** — an early picture that looks like reflux
+  (burning retrosternal pain, worse after meals) that a **late** finding
+  (exertional onset, radiation to the arm, diaphoresis) dramatically reshuffles
+  toward acute coronary syndrome, demonstrating that TAO does not anchor on the
+  first impression.
 
-Throughout, the transcript streams on the right, the probability board animates
-on the left, and clicking a condition shows its "why" plus sources.
+Throughout any scenario, the transcript streams on the right, the probability
+board animates on the left (FLIP reorder + pulse + delta badges), the suggested
+next question and confidence meter update live, the findings rail fills in, and
+clicking a condition shows its "why" plus sources.
 
 ## How TAO coexists with Benchwatch
 
