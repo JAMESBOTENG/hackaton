@@ -4,14 +4,16 @@
  * Shows two things the clinician needs to trust (or challenge) the ranking:
  *   1. WHY — a plain-language summary built deterministically from the
  *      condition's whyTemplate plus the ACTUAL findings currently driving its
- *      score, phrased as "raised by: … ; lowered by: …" so the reasoning ties
+ *      score, phrased as "Raised by: … / Lowered by: …" so the reasoning ties
  *      back to what the patient actually said.
  *   2. SOURCES — the condition's curated, clickable references (always shown,
  *      works offline), with any successfully-fetched live PubMed citations
  *      layered on top as a progressive enhancement.
  *
  * The PubMed fetch is best-effort (see pubmed.ts): if it fails or we are
- * offline, the bundled references remain and nothing breaks.
+ * offline, it resolves to [] and the bundled references remain — rendering
+ * never blocks on the network. While the request is in flight we show a tasteful
+ * shimmer placeholder (FEAT-001 `animate-shimmer`), not a spinner.
  */
 import { useEffect, useRef, useState } from "react";
 import { conditionsById } from "../data/conditions";
@@ -38,7 +40,7 @@ export default function ConditionDetail({ scored, onClose }: Props) {
     let cancelled = false;
     setLive([]);
     setLiveState("loading");
-    fetchPubMedCitations(`${condition.name} chest pain diagnosis`)
+    fetchPubMedCitations(`${condition.name} diagnosis`)
       .then((results) => {
         if (cancelled) return;
         setLive(results);
@@ -75,41 +77,47 @@ export default function ConditionDetail({ scored, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/80 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={`${condition.name} detail`}
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+        className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-hairline-strong bg-surface-overlay shadow-overlay"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-hairline px-6 py-4">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-slate-100">
+              <h2 className="text-xl font-semibold text-content">
                 {condition.name}
               </h2>
               {condition.cantMiss && (
-                <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-200 ring-1 ring-rose-500/40">
+                <span className="rounded-full bg-critical-500/20 px-2 py-0.5 text-2xs font-bold uppercase tracking-wide text-critical-200 ring-1 ring-critical-500/50">
                   Can&rsquo;t miss
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm text-slate-400">{condition.description}</p>
+            <p className="mt-1 text-sm text-content-muted">
+              {condition.description}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <span className="font-mono text-2xl font-bold tabular-nums text-sky-300">
+            <span
+              className={`font-mono text-2xl font-bold tabular-nums ${
+                condition.cantMiss ? "text-critical-200" : "text-brand-300"
+              }`}
+            >
               {pct}
-              <span className="text-sm font-normal text-slate-500">%</span>
+              <span className="text-sm font-normal text-content-subtle">%</span>
             </span>
             <button
               ref={closeRef}
               onClick={onClose}
               aria-label="Close"
-              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-700"
+              className="rounded-md border border-hairline bg-surface-inset px-3 py-1.5 text-sm font-medium text-content transition-colors hover:bg-surface-raised"
             >
               Back
             </button>
@@ -118,25 +126,25 @@ export default function ConditionDetail({ scored, onClose }: Props) {
 
         {/* WHY */}
         <section className="px-6 py-5">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <h3 className="text-eyebrow mb-2 text-2xs font-semibold uppercase text-content-subtle">
             Why this is being considered
           </h3>
-          <p className="text-sm leading-relaxed text-slate-200">
+          <p className="text-sm leading-relaxed text-content">
             {condition.whyTemplate}
           </p>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <ReasonColumn
               title="Raised by"
-              accent="text-emerald-300"
-              dot="bg-emerald-400"
+              accent="text-present-300"
+              dot="bg-present-400"
               items={raisedBy}
               emptyText="No supporting findings yet."
             />
             <ReasonColumn
               title="Lowered by"
-              accent="text-rose-300"
-              dot="bg-rose-400"
+              accent="text-denied-300"
+              dot="bg-denied-400"
               items={loweredBy}
               emptyText="No findings arguing against it yet."
             />
@@ -144,8 +152,8 @@ export default function ConditionDetail({ scored, onClose }: Props) {
         </section>
 
         {/* SOURCES */}
-        <section className="border-t border-slate-800 px-6 py-5">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <section className="border-t border-hairline px-6 py-5">
+          <h3 className="text-eyebrow mb-3 text-2xs font-semibold uppercase text-content-subtle">
             Sources &amp; research
           </h3>
 
@@ -156,13 +164,13 @@ export default function ConditionDetail({ scored, onClose }: Props) {
                   href={ref.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-2 text-sm text-sky-300 transition-colors hover:border-sky-600/50 hover:bg-slate-800"
+                  className="flex items-center gap-2 rounded-lg border border-hairline bg-surface-inset px-3 py-2 text-sm text-content transition-colors hover:border-brand-600/50 hover:bg-surface-raised"
                 >
-                  <span className="shrink-0 rounded bg-slate-700 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                  <span className="shrink-0 rounded bg-ink-700 px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-content-muted">
                     {ref.source}
                   </span>
                   <span className="truncate">{ref.title}</span>
-                  <span className="ml-auto shrink-0 text-xs text-slate-500">
+                  <span className="ml-auto shrink-0 text-xs text-content-subtle">
                     open ↗
                   </span>
                 </a>
@@ -173,14 +181,17 @@ export default function ConditionDetail({ scored, onClose }: Props) {
           {/* Live PubMed layer (progressive enhancement) */}
           <div className="mt-4">
             <div className="mb-2 flex items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
+              <span className="text-eyebrow text-2xs font-semibold uppercase text-present-300">
                 Live from PubMed
               </span>
               {liveState === "loading" && (
-                <span className="text-[11px] text-slate-500">searching…</span>
+                <span className="text-2xs text-content-subtle">searching…</span>
               )}
             </div>
-            {live.length > 0 ? (
+
+            {liveState === "loading" ? (
+              <PubMedShimmer />
+            ) : live.length > 0 ? (
               <ul className="space-y-2">
                 {live.map((c) => (
                   <li key={c.pmid}>
@@ -188,13 +199,13 @@ export default function ConditionDetail({ scored, onClose }: Props) {
                       href={c.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-lg border border-emerald-800/40 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-600/60 hover:bg-emerald-500/10"
+                      className="flex items-center gap-2 rounded-lg border border-present-800/40 bg-present-500/5 px-3 py-2 text-sm text-present-200 transition-colors hover:border-present-600/60 hover:bg-present-500/10"
                     >
-                      <span className="shrink-0 rounded bg-emerald-700/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+                      <span className="shrink-0 rounded bg-present-700/40 px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-present-200">
                         PubMed
                       </span>
                       <span className="truncate">{c.title}</span>
-                      <span className="ml-auto shrink-0 text-xs text-emerald-500/70">
+                      <span className="ml-auto shrink-0 text-xs text-present-400/70">
                         open ↗
                       </span>
                     </a>
@@ -202,20 +213,35 @@ export default function ConditionDetail({ scored, onClose }: Props) {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-500">
-                {liveState === "done"
-                  ? "No live results available (offline or blocked) — the curated sources above always work."
-                  : "Checking for recent citations…"}
+              <p className="text-xs text-content-subtle">
+                No live results available (offline or blocked) — the curated
+                sources above always work.
               </p>
             )}
           </div>
         </section>
 
-        <div className="border-t border-slate-800 px-6 py-3 text-center text-[11px] text-slate-500">
+        <div className="border-t border-hairline px-6 py-3 text-center text-2xs text-content-subtle">
           Decision support, not a diagnosis. Educational demo data.
         </div>
       </div>
     </div>
+  );
+}
+
+/** Tasteful loading placeholder for the in-flight PubMed request. */
+function PubMedShimmer() {
+  return (
+    <ul className="space-y-2" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <li
+          key={i}
+          className="relative h-9 overflow-hidden rounded-lg border border-hairline bg-surface-inset"
+        >
+          <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-ink-700/50 to-transparent" />
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -233,17 +259,24 @@ function ReasonColumn({
   emptyText: string;
 }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-800/30 p-3">
-      <div className={`mb-2 text-xs font-semibold uppercase tracking-wide ${accent}`}>
+    <div className="rounded-lg border border-hairline bg-surface-inset p-3">
+      <div
+        className={`mb-2 text-2xs font-semibold uppercase tracking-wide ${accent}`}
+      >
         {title}
       </div>
       {items.length === 0 ? (
-        <p className="text-xs text-slate-500">{emptyText}</p>
+        <p className="text-xs text-content-subtle">{emptyText}</p>
       ) : (
         <ul className="space-y-1">
           {items.map((label, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-slate-200">
-              <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+            <li
+              key={i}
+              className="flex items-start gap-2 text-sm text-content"
+            >
+              <span
+                className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
+              />
               <span>{label}</span>
             </li>
           ))}
