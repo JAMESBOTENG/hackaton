@@ -144,7 +144,7 @@ export default function ProbabilityCard({
               }`}
             >
               {up ? "▲ +" : "▼ "}
-              {up ? deltaPct.toFixed(1) : deltaPct.toFixed(1)}%
+              {deltaPct.toFixed(1)}%
             </span>
           )}
         </div>
