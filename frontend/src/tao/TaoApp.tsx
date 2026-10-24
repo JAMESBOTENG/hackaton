@@ -27,6 +27,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TranscriptPlayer, type PlayerState } from "./engine/player";
 import { scoreConditions, type ScoredCondition } from "./engine/score";
+import { runEngineSelfCheck } from "./engine/selfcheck";
 import type { ConsultationTurn } from "./data/consultation";
 import { findings } from "./data/findings";
 import ProbabilityBoard from "./components/ProbabilityBoard";
@@ -44,6 +45,12 @@ export default function TaoApp() {
   const [liveTurns, setLiveTurns] = useState<ConsultationTurn[]>([]);
   const [liveAsserted, setLiveAsserted] = useState<string[]>([]);
   const recognitionRef = useRef<any>(null);
+
+  // DEV-only: assert the deterministic engine invariants once at startup.
+  // No-op (and never throws) in production — see engine/selfcheck.ts.
+  useEffect(() => {
+    runEngineSelfCheck();
+  }, []);
 
   // Subscribe to the deterministic player. Cleanup disposes timers on unmount.
   useEffect(() => {

@@ -702,6 +702,209 @@ export const conditions: Condition[] = [
       },
     ],
   },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // HEADACHE presentation (used by the HEADACHE scenario). DEMO / EDUCATIONAL.
+  //
+  // Illustrative teaching priors for an adult presenting with headache: benign
+  // primary headaches (migraine, tension) are by far the most common, while
+  // the can't-miss emergencies (subarachnoid haemorrhage, meningitis) are rare
+  // but must stay on the radar until their red-flag features are excluded.
+  // These conditions weight the headache-specific findings added to findings.ts
+  // and must never be scored in the same pool as the chest-pain conditions
+  // above — each scenario supplies its own conditionPool (see data/scenarios.ts).
+  // ════════════════════════════════════════════════════════════════════════
+
+  // ───────────────────────── Can't-miss emergencies ─────────────────────────
+  {
+    id: "subarachnoid_hemorrhage",
+    name: "Subarachnoid haemorrhage",
+    description:
+      "Bleeding into the space around the brain, usually from a ruptured aneurysm.",
+    prior: 0.3,
+    cantMiss: true,
+    findingWeights: {
+      thunderclap_onset: 2.4,
+      worst_headache_of_life: 2.0,
+      neck_stiffness: 1.3,
+      sudden_onset: 1.4,
+      nausea_vomiting: 0.6,
+      focal_neuro_deficit: 1.0,
+      hypertension: 0.6,
+      headache: 0.6,
+      gradual_onset: -1.6,
+      prior_similar_headaches: -1.3,
+      relieved_by_dark_room: -0.8,
+      unilateral_throbbing: -0.6,
+    },
+    whyTemplate:
+      "A headache that reaches maximum intensity instantly (thunderclap) and is the worst ever, with neck stiffness, is the classic pattern of a subarachnoid haemorrhage and must be excluded first.",
+    references: [
+      {
+        title: "Subarachnoid Hemorrhage (StatPearls)",
+        url: "https://www.ncbi.nlm.nih.gov/books/NBK441958/",
+        source: "StatPearls",
+      },
+      {
+        title: "Subarachnoid hemorrhage — MedlinePlus",
+        url: "https://medlineplus.gov/ency/article/000701.htm",
+        source: "MedlinePlus",
+      },
+    ],
+  },
+  {
+    id: "meningitis",
+    name: "Meningitis",
+    description:
+      "Infection and inflammation of the membranes surrounding the brain and spinal cord.",
+    prior: 0.3,
+    cantMiss: true,
+    findingWeights: {
+      neck_stiffness: 2.0,
+      fever: 1.8,
+      photophobia: 1.1,
+      headache: 0.7,
+      nausea_vomiting: 0.6,
+      recent_uri: 0.5,
+      focal_neuro_deficit: 0.6,
+      gradual_onset: 0.3,
+      prior_similar_headaches: -1.2,
+      unilateral_throbbing: -0.7,
+      relieved_by_dark_room: -0.6,
+    },
+    whyTemplate:
+      "Headache with fever, neck stiffness and light sensitivity suggests meningitis, a can't-miss infection that needs urgent treatment.",
+    references: [
+      {
+        title: "Meningitis (StatPearls)",
+        url: "https://www.ncbi.nlm.nih.gov/books/NBK459360/",
+        source: "StatPearls",
+      },
+      {
+        title: "Meningitis — WHO fact sheet",
+        url: "https://www.who.int/news-room/fact-sheets/detail/meningitis",
+        source: "WHO",
+      },
+      {
+        title: "Meningitis — MedlinePlus",
+        url: "https://medlineplus.gov/meningitis.html",
+        source: "MedlinePlus",
+      },
+    ],
+  },
+  {
+    id: "giant_cell_arteritis",
+    name: "Giant cell arteritis",
+    description:
+      "Inflammation of medium and large arteries, typically of the temples, in older adults.",
+    prior: 0.25,
+    cantMiss: true,
+    findingWeights: {
+      scalp_tenderness: 2.1,
+      visual_disturbance: 1.6,
+      older_age: 1.2,
+      headache: 0.7,
+      gradual_onset: 0.6,
+      fever: 0.4,
+      thunderclap_onset: -1.0,
+      unilateral_throbbing: -0.3,
+      prior_similar_headaches: -1.0,
+      aura: -0.6,
+    },
+    whyTemplate:
+      "A new headache with scalp or temporal tenderness and visual symptoms in an older adult raises giant cell arteritis, which threatens sight without prompt steroids.",
+    references: [
+      {
+        title: "Giant Cell Arteritis (StatPearls)",
+        url: "https://www.ncbi.nlm.nih.gov/books/NBK459376/",
+        source: "StatPearls",
+      },
+      {
+        title: "Giant cell arteritis — MedlinePlus",
+        url: "https://medlineplus.gov/ency/article/000448.htm",
+        source: "MedlinePlus",
+      },
+    ],
+  },
+
+  // ───────────────────────── Common differentials ──────────────────────────
+  {
+    id: "migraine",
+    name: "Migraine",
+    description:
+      "A recurrent primary headache, often one-sided and throbbing, with light sensitivity.",
+    prior: 1.4,
+    cantMiss: false,
+    findingWeights: {
+      unilateral_throbbing: 1.7,
+      photophobia: 1.4,
+      aura: 1.6,
+      relieved_by_dark_room: 1.3,
+      nausea_vomiting: 0.9,
+      prior_similar_headaches: 1.2,
+      gradual_onset: 0.6,
+      headache: 0.6,
+      thunderclap_onset: -1.6,
+      worst_headache_of_life: -0.8,
+      neck_stiffness: -0.9,
+      fever: -0.8,
+      focal_neuro_deficit: -0.7,
+    },
+    whyTemplate:
+      "A one-sided throbbing headache with light sensitivity, aura and relief in a dark room, matching previous episodes, is the classic pattern of migraine.",
+    references: [
+      {
+        title: "Migraine Headache (StatPearls)",
+        url: "https://www.ncbi.nlm.nih.gov/books/NBK560787/",
+        source: "StatPearls",
+      },
+      {
+        title: "Headaches: diagnosis and management (NICE CG150)",
+        url: "https://www.nice.org.uk/guidance/cg150",
+        source: "NICE",
+      },
+      {
+        title: "Migraine — MedlinePlus",
+        url: "https://medlineplus.gov/migraine.html",
+        source: "MedlinePlus",
+      },
+    ],
+  },
+  {
+    id: "tension_headache",
+    name: "Tension-type headache",
+    description:
+      "The most common primary headache: a bilateral, pressing, band-like ache.",
+    prior: 1.3,
+    cantMiss: false,
+    findingWeights: {
+      gradual_onset: 1.0,
+      prior_similar_headaches: 1.0,
+      stress_related: 1.2,
+      headache: 0.6,
+      unilateral_throbbing: -0.8,
+      photophobia: -0.5,
+      aura: -0.9,
+      thunderclap_onset: -1.4,
+      neck_stiffness: -0.6,
+      fever: -0.7,
+      focal_neuro_deficit: -0.8,
+    },
+    whyTemplate:
+      "A gradual, bilateral pressing headache linked to stress, resembling the patient's usual headaches and without red-flag features, fits a tension-type headache.",
+    references: [
+      {
+        title: "Tension Headache (StatPearls)",
+        url: "https://www.ncbi.nlm.nih.gov/books/NBK482320/",
+        source: "StatPearls",
+      },
+      {
+        title: "Headaches: diagnosis and management (NICE CG150)",
+        url: "https://www.nice.org.uk/guidance/cg150",
+        source: "NICE",
+      },
+    ],
+  },
 ];
 
 /** Fast id -> Condition lookup. */

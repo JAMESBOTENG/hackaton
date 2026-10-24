@@ -219,6 +219,108 @@ export const findings: Finding[] = [
     canonical: "Recent upper respiratory / viral prodrome",
     kind: "risk_factor",
   },
+
+  // ───────────────────────── Headache presentation ─────────────────────────
+  // Added for the HEADACHE scenario (migraine vs. subarachnoid haemorrhage /
+  // meningitis / giant cell arteritis). DEMO / EDUCATIONAL, no PII.
+  {
+    id: "headache",
+    label: "Headache",
+    canonical: "Headache as the presenting complaint",
+    kind: "symptom",
+    negationLabel: "No headache",
+  },
+  {
+    id: "thunderclap_onset",
+    label: "Thunderclap onset",
+    canonical: "Instantaneous, maximal-at-onset (thunderclap) headache",
+    kind: "symptom",
+    negationLabel: "No thunderclap onset",
+  },
+  {
+    id: "worst_headache_of_life",
+    label: "Worst headache of life",
+    canonical: "Patient reports the worst headache they have ever had",
+    kind: "symptom",
+    negationLabel: "Not the worst headache ever",
+  },
+  {
+    id: "neck_stiffness",
+    label: "Neck stiffness",
+    canonical: "Neck stiffness / meningismus",
+    kind: "sign",
+    negationLabel: "No neck stiffness",
+  },
+  {
+    id: "photophobia",
+    label: "Light sensitivity",
+    canonical: "Photophobia (discomfort in bright light)",
+    kind: "symptom",
+    negationLabel: "No light sensitivity",
+  },
+  {
+    id: "aura",
+    label: "Visual aura",
+    canonical: "Preceding visual aura (e.g. zig-zag lines, scotoma)",
+    kind: "symptom",
+    negationLabel: "No aura",
+  },
+  {
+    id: "unilateral_throbbing",
+    label: "One-sided throbbing",
+    canonical: "Unilateral, pulsating/throbbing headache",
+    kind: "symptom",
+    negationLabel: "Not one-sided or throbbing",
+  },
+  {
+    id: "relieved_by_dark_room",
+    label: "Eased by dark/quiet",
+    canonical: "Relieved by lying in a dark, quiet room",
+    kind: "symptom",
+    negationLabel: "Not relieved by dark/quiet",
+  },
+  {
+    id: "focal_neuro_deficit",
+    label: "Focal neurological deficit",
+    canonical: "Focal neurological deficit (weakness, speech or vision loss)",
+    kind: "sign",
+    negationLabel: "No focal neurological deficit",
+  },
+  {
+    id: "gradual_onset",
+    label: "Gradual onset",
+    canonical: "Headache that built up gradually over minutes to hours",
+    kind: "symptom",
+    negationLabel: "Not gradual in onset",
+  },
+  {
+    id: "prior_similar_headaches",
+    label: "Prior similar headaches",
+    canonical: "History of previous similar headache episodes",
+    kind: "risk_factor",
+    negationLabel: "No previous similar headaches",
+  },
+  {
+    id: "scalp_tenderness",
+    label: "Scalp tenderness",
+    canonical: "Tender scalp or temporal artery, jaw claudication",
+    kind: "sign",
+    negationLabel: "No scalp tenderness",
+  },
+  {
+    id: "visual_disturbance",
+    label: "Visual disturbance",
+    canonical: "New visual disturbance or transient visual loss",
+    kind: "symptom",
+    negationLabel: "No visual disturbance",
+  },
+  {
+    id: "nausea_vomiting",
+    label: "Nausea/vomiting",
+    canonical: "Nausea or vomiting accompanying the headache",
+    kind: "symptom",
+    negationLabel: "No nausea or vomiting",
+  },
 ];
 
 /** Fast id -> Finding lookup. */

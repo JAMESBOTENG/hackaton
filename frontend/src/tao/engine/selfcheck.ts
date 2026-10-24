@@ -1,0 +1,113 @@
+/**
+ * TAO — deterministic engine self-check (DEV only).
+ *
+ * ⚠️ DEMO / EDUCATIONAL. There is no frontend unit-test runner, so this module
+ * is the correctness anchor for the newer engine math (suggested next question
+ * + evidence confidence). It asserts a handful of invariants at startup and,
+ * like the unknown-finding-id check in score.ts, runs ONLY under
+ * import.meta.env?.DEV and NEVER throws in production — failures are reported
+ * with console.warn so a broken assumption is loud in development but can never
+ * break the shipped demo.
+ *
+ * Call runEngineSelfCheck() once from the app entry / TaoApp, guarded by DEV.
+ */
+
+import { scoreConditions } from "./score";
+import { suggestNextQuestion } from "./nextQuestion";
+import { evidenceConfidence } from "./confidence";
+import { scenariosById, defaultScenarioId } from "../data/scenarios";
+
+/** Collected failure messages; empty means all invariants held. */
+function check(): string[] {
+  const failures: string[] = [];
+  const assert = (ok: boolean, msg: string) => {
+    if (!ok) failures.push(msg);
+  };
+
+  const scenario = scenariosById[defaultScenarioId];
+  const pool = scenario?.conditionPool;
+
+  // Build an "early" (thin) and a "full" (fully-played) finding state from the
+  // default scenario's script.
+  const earlyState = { asserted: ["chest_pain"], negated: [] as string[] };
+
+  const fullAsserted = new Set<string>();
+  const fullNegated = new Set<string>();
+  for (const turn of scenario?.consultation ?? []) {
+    for (const id of turn.revealsFindings ?? []) {
+      fullNegated.delete(id);
+      fullAsserted.add(id);
+    }
+    for (const id of turn.negatesFindings ?? []) {
+      fullAsserted.delete(id);
+      fullNegated.add(id);
+    }
+  }
+  const fullState = {
+    asserted: [...fullAsserted],
+    negated: [...fullNegated],
+  };
+
+  // ── 1. Determinism: identical input -> identical suggestion ──────────────
+  const earlyScored = scoreConditions(earlyState, pool);
+  const s1 = suggestNextQuestion(earlyScored, earlyState);
+  const s2 = suggestNextQuestion(earlyScored, earlyState);
+  assert(
+    JSON.stringify(s1) === JSON.stringify(s2),
+    "suggestNextQuestion is not deterministic for identical input"
+  );
+
+  // ── 2. suggestNextQuestion never returns an already-asked finding ────────
+  if (s1) {
+    const asked = new Set([
+      ...earlyState.asserted,
+      ...earlyState.negated,
+    ]);
+    assert(
+      !asked.has(s1.findingId),
+      `suggestNextQuestion returned an already-asked finding: ${s1.findingId}`
+    );
+  }
+
+  // ── 3. Confidence scales with evidence: early = low, full = higher ───────
+  const earlyConf = evidenceConfidence(earlyScored, earlyState);
+  const fullScored = scoreConditions(fullState, pool);
+  const fullConf = evidenceConfidence(fullScored, fullState);
+  const rank: Record<string, number> = { low: 0, medium: 1, high: 2 };
+  assert(
+    earlyConf.level === "low",
+    `expected 'low' confidence for a 1-finding state, got '${earlyConf.level}'`
+  );
+  assert(
+    rank[fullConf.level] > rank[earlyConf.level],
+    `expected fully-played confidence (${fullConf.level}) to exceed early (${earlyConf.level})`
+  );
+  assert(
+    fullConf.findingsCount > earlyConf.findingsCount,
+    "fully-played findingsCount should exceed the early state"
+  );
+
+  return failures;
+}
+
+/**
+ * Run the engine self-check. No-op outside DEV. Reports failures via
+ * console.warn and never throws, so it is safe to call unconditionally from the
+ * app entry.
+ */
+export function runEngineSelfCheck(): void {
+  if (!import.meta.env?.DEV) return;
+  try {
+    const failures = check();
+    if (failures.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[tao/selfcheck] engine invariants FAILED:\n" +
+          failures.map((f) => `  • ${f}`).join("\n")
+      );
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[tao/selfcheck] self-check threw (ignored in DEV):", err);
+  }
+}

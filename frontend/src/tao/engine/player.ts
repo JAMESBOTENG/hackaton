@@ -18,7 +18,6 @@
 
 import {
   consultation,
-  consultationDurationMs,
   type ConsultationTurn,
 } from "../data/consultation";
 
@@ -72,9 +71,14 @@ export class TranscriptPlayer {
     };
   }
 
-  /** Total scripted runtime in ms. */
+  /**
+   * Total scripted runtime in ms, derived generically from the loaded script
+   * (last turn's time plus a short pad) so the player can run ANY scenario to
+   * completion, not just the bundled chest-pain case.
+   */
   get durationMs(): number {
-    return consultationDurationMs;
+    if (this.turns.length === 0) return 0;
+    return this.turns[this.turns.length - 1].atMs + 3000;
   }
 
   /** Subscribe; immediately receives the current snapshot. Returns unsubscribe. */
