@@ -28,6 +28,12 @@ export interface Scenario {
   id: string;
   /** Short title for the selector. */
   title: string;
+  /** Compact fictional patient profile. */
+  patientProfile: string;
+  /** Chief complaint summary. */
+  complaint: string;
+  /** Pre-start case briefing. */
+  briefing: string;
   /** One-line description / subtitle shown under the title. */
   description: string;
   /** The scripted consultation, ordered by atMs. */
@@ -282,6 +288,9 @@ export const scenarios: Scenario[] = [
   {
     id: "chest_pain",
     title: "Chest pain → ACS",
+    patientProfile: "Alex Rivera · 58 · fictional demo patient",
+    complaint: "Central chest pressure for two hours, worse with activity",
+    briefing: "A focused chest-pain history that progressively tests ischemic features and explicitly checks competing emergencies.",
     description:
       "An adult with exertional chest pain and cardiac risk factors; ACS leads while the emergencies stay on the radar.",
     consultation,
@@ -290,6 +299,9 @@ export const scenarios: Scenario[] = [
   {
     id: "headache",
     title: "Headache → migraine vs SAH",
+    patientProfile: "Jordan Lee · 34 · fictional demo patient",
+    complaint: "Severe right-sided headache beginning this morning",
+    briefing: "A headache consultation that tests bleed and infection red flags before a familiar migraine pattern emerges.",
     description:
       "A severe one-sided headache that trends to migraine as the can't-miss subarachnoid haemorrhage and meningitis red flags are explicitly excluded.",
     consultation: HEADACHE_CONSULTATION,
@@ -298,6 +310,9 @@ export const scenarios: Scenario[] = [
   {
     id: "late_twist",
     title: "Late twist (anti-anchoring)",
+    patientProfile: "Sam Carter · 61 · fictional demo patient",
+    complaint: "Burning retrosternal discomfort initially resembling reflux",
+    briefing: "A deliberate anti-anchoring case: benign early cues are overturned by late high-value ischemic evidence.",
     description:
       "What looks like simple reflux is dramatically overturned late by exertional, radiating, sweaty pain — the board reshuffles to a can't-miss emergency.",
     consultation: LATE_TWIST_CONSULTATION,

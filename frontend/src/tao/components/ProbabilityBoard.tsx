@@ -1,136 +1,60 @@
-/**
- * TAO — the diagnostic probability board (left + center, majority of the page).
- *
- * Renders the ranked conditions as color-coded cards sorted by probability and
- * animates the cinematic RESHUFFLE as the ranking changes while the
- * consultation plays.
- *
- * ── Smooth reshuffle without a heavy animation lib (FLIP) ──────────────────
- * We keep the DOM order = ranking order (so tab/reading order is correct), and
- * animate movement with the FLIP technique using only CSS transforms:
- *   1. Before each re-render, record each card's screen position (First).
- *   2. After React commits the new order, read the new position (Last).
- *   3. Invert: translate each card from Last back to First with transform.
- *   4. Play: on the next frame, clear the transform so the CSS transition
- *      glides each card to its real position.
- * This gives buttery reorder animations with zero dependencies.
- *
- * ── Per-turn delta + pulse + transcript link ───────────────────────────────
- * We track the PREVIOUS probability of every condition in a ref keyed by
- * conditionId. Each render computes a signed delta, flags cards that changed
- * meaningfully for a one-shot highlight pulse, and flags cards the latest
- * transcript turn directly touched (its revealed/negated findings appear in the
- * card's weighted findings) so the moved card and the spoken line share a brief
- * accent. All motion respects prefers-reduced-motion (handled globally in
- * index.css).
- */
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ScoredCondition } from "../engine/score";
 import { conditionsById } from "../data/conditions";
 import ProbabilityCard from "./ProbabilityCard";
 
-interface Props {
-  scored: ScoredCondition[];
-  /** Finding ids the latest transcript turn revealed or negated (for the link). */
-  lastTurnFindings?: string[];
-  onSelect: (conditionId: string) => void;
-}
+interface Props { scored: ScoredCondition[]; lastTurnFindings?: string[]; onSelect: (id: string) => void; resetKey: string; }
+const MEANINGFUL_DELTA = 0.015;
 
-/** A probability change this small is treated as noise (no pulse/badge). */
-const MEANINGFUL_DELTA = 0.02;
-
-export default function ProbabilityBoard({
-  scored,
-  lastTurnFindings = [],
-  onSelect,
-}: Props) {
+export default function ProbabilityBoard({ scored, lastTurnFindings = [], onSelect, resetKey }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // Map of conditionId -> last known bounding-box top, for FLIP.
-  const positions = useRef<Map<string, number>>(new Map());
-  // Map of conditionId -> probability at the PREVIOUS render, for deltas.
-  const prevProb = useRef<Map<string, number>>(new Map());
+  const positions = useRef(new Map<string, number>());
+  const previous = useRef(new Map<string, { probability: number; rank: number }>());
+  const raf = useRef<number>();
+  const [announcement, setAnnouncement] = useState("");
 
-  // Compute per-card delta + pulse + linked flags against the previous snapshot.
-  // Done in a memo so the ref update below sees the same values we render.
   const meta = useMemo(() => {
     const touched = new Set(lastTurnFindings);
-    const m = new Map<
-      string,
-      { delta: number; pulse: boolean; linked: boolean }
-    >();
-    for (const s of scored) {
-      const prev = prevProb.current.get(s.conditionId);
-      const delta = prev === undefined ? 0 : s.probability - prev;
-      const pulse = prev !== undefined && Math.abs(delta) >= MEANINGFUL_DELTA;
-      const condition = conditionsById[s.conditionId];
-      const linked =
-        touched.size > 0 &&
-        !!condition &&
-        Object.keys(condition.findingWeights).some((id) => touched.has(id));
-      m.set(s.conditionId, { delta, pulse, linked });
-    }
-    return m;
-    // Recompute only when the ranking or the triggering turn changes.
+    return new Map(scored.map((item, rank) => {
+      const old = previous.current.get(item.conditionId);
+      const delta = old ? item.probability - old.probability : 0;
+      const condition = conditionsById[item.conditionId];
+      const linked = !!condition && [...touched].some((id) => id in condition.findingWeights);
+      return [item.conditionId, { delta, changed: !!old && Math.abs(delta) >= MEANINGFUL_DELTA, linked, rankMove: old ? old.rank - rank : 0 }];
+    }));
   }, [scored, lastTurnFindings]);
 
-  // FLIP reorder + commit the current probabilities as the next baseline.
+  useEffect(() => {
+    positions.current.clear(); previous.current.clear(); setAnnouncement("");
+  }, [resetKey]);
+
   useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      const cards = Array.from(
-        container.querySelectorAll<HTMLElement>("[data-card-id]")
-      );
-      for (const card of cards) {
-        const id = card.dataset.cardId!;
-        const newTop = card.getBoundingClientRect().top;
-        const oldTop = positions.current.get(id);
-        if (oldTop !== undefined) {
-          const delta = oldTop - newTop;
-          if (Math.abs(delta) > 1) {
-            card.style.transition = "none";
-            card.style.transform = `translateY(${delta}px)`;
-            requestAnimationFrame(() => {
-              card.style.transition =
-                "transform 520ms cubic-bezier(0.22,1,0.36,1)";
-              card.style.transform = "";
-            });
-          }
-        }
-        positions.current.set(id, newTop);
+    const cards = containerRef.current?.querySelectorAll<HTMLElement>("[data-card-id]") ?? [];
+    cards.forEach((card) => {
+      const id = card.dataset.cardId!;
+      const top = card.getBoundingClientRect().top;
+      const old = positions.current.get(id);
+      if (old !== undefined && Math.abs(old - top) > 1) {
+        card.style.transition = "none"; card.style.transform = `translateY(${old - top}px)`;
+        raf.current = requestAnimationFrame(() => { card.style.transition = "transform 420ms cubic-bezier(.22,1,.36,1)"; card.style.transform = ""; });
       }
+      positions.current.set(id, top);
+    });
+    const biggest = [...meta.entries()].sort((a, b) => Math.abs(b[1].rankMove) - Math.abs(a[1].rankMove))[0];
+    if (biggest?.[1].rankMove) {
+      const name = conditionsById[biggest[0]]?.name ?? biggest[0];
+      setAnnouncement(`${name} moved ${biggest[1].rankMove > 0 ? "up" : "down"} ${Math.abs(biggest[1].rankMove)} ${Math.abs(biggest[1].rankMove) === 1 ? "place" : "places"}.`);
     }
+    previous.current = new Map(scored.map((item, rank) => [item.conditionId, { probability: item.probability, rank }]));
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, [scored, meta]);
 
-    // Record current probabilities so the NEXT render can diff against them.
-    const next = new Map<string, number>();
-    for (const s of scored) next.set(s.conditionId, s.probability);
-    prevProb.current = next;
-  }, [scored]);
-
-  return (
-    <div ref={containerRef} className="space-y-2.5">
-      {scored.map((s, i) => {
-        const info = meta.get(s.conditionId) ?? {
-          delta: 0,
-          pulse: false,
-          linked: false,
-        };
-        return (
-          <div
-            key={s.conditionId}
-            data-card-id={s.conditionId}
-            className="will-change-transform"
-          >
-            <ProbabilityCard
-              scored={s}
-              rank={i}
-              delta={info.delta}
-              pulse={info.pulse}
-              linked={info.linked}
-              onClick={() => onSelect(s.conditionId)}
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <section className="tao-board" aria-labelledby="differential-title">
+    <div className="tao-section-heading"><div><span>Ranked evidence</span><h2 id="differential-title">Leading considerations</h2></div><p>Illustrative model · normalized evidence alignment</p></div>
+    <div ref={containerRef} className="tao-rank-list">{scored.map((item, rank) => {
+      const info = meta.get(item.conditionId) ?? { delta: 0, changed: false, linked: false, rankMove: 0 };
+      return <div key={item.conditionId} data-card-id={item.conditionId}><ProbabilityCard scored={item} rank={rank} delta={info.delta} changed={info.changed} linked={info.linked} onClick={() => onSelect(item.conditionId)} /></div>;
+    })}</div>
+    <p className="tao-sr-only" aria-live="polite">{announcement}</p>
+  </section>;
 }

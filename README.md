@@ -2,7 +2,7 @@
 
 This repository hosts two products that share one `frontend/` build:
 
-- **TAO** — the live diagnostic decision-support co-pilot and the **public demo**
+- **TAO** — the browser-only clinical decision-support co-pilot and the **public demo**
   deployed to GitHub Pages (the default route). Described first, below.
 - **Benchwatch** — the original protocol-aware lab-bench co-pilot (React
   frontend + FastAPI/Python backend). **Unchanged**, and documented in full
@@ -16,11 +16,7 @@ default. Benchwatch is still reachable from the same build via `?benchwatch=1`
 
 # TAO — Diagnostic Co-pilot
 
-**A live diagnostic decision-support co-pilot. A doctor talks naturally with a
-patient; TAO transcribes the conversation on the right and, on the left, shows a
-graphically clear, continuously-updating board of the conditions the patient
-might have. Click any condition to see *why* it is ranked where it is and the
-research sources behind it.**
+**A compact, browser-only clinical reasoning cockpit. A deterministic scripted consultation reveals evidence while TAO continuously ranks leading considerations, keeps every can't-miss condition visible, and exposes the complete signed-weight calculation behind each evidence share. Clinicians can pause, accelerate, step to the next finding, and answer the highest-value information gap directly.**
 
 > ⚠️ **Decision support, not a diagnosis.** TAO is a demo/educational tool that
 > surfaces possibilities and their supporting evidence for a clinician to weigh.
@@ -31,7 +27,7 @@ research sources behind it.**
 
 As the consultation unfolds, each spoken finding (chest pain, radiation to the
 arm, leg swelling, a recent long-haul flight, and so on) feeds a scoring engine
-that reshuffles the probability board in real time. Emergencies that must not be
+that reshuffles the evidence-alignment board in real time. Emergencies that must not be
 missed stay on the radar even when another condition leads. Selecting a
 condition opens a detail view with:
 
@@ -39,44 +35,20 @@ condition opens a detail view with:
 - **sources** — curated references bundled with the app, augmented by live
   PubMed citations when the network allows.
 
-## Boardroom-quality design system
+## Premium clinical cockpit
 
-TAO is presented through a single, disciplined design direction called
-**"Boardroom Navy"** — a refined deep-navy executive-analytics palette defined
-as design tokens in `frontend/tailwind.config.js` and consumed consistently
-across every surface. The aesthetic is calm, authoritative, data-dense but
-uncluttered, with strong typographic hierarchy and restrained color.
+TAO uses a scoped light consulting/clinical design system: warm white and pale-blue surfaces, navy typography, one cobalt accent, emergency red, and accessible green/purple evidence states. It is data-dense but calm, with thin dividers, restrained elevation, compact tabular metrics, and bounded panel scrolling designed to keep the core workflow inside a 1440×900 viewport.
 
-The guiding principle is that **color encodes meaning, never decoration**:
-
-- **Probability magnitude** — the leading condition uses the confident brand
-  (sapphire) accent; near-leaders cool off and long-shots recede into muted ink,
-  so the eye reads the ranking instantly.
-- **Can't-miss / risk tier** — a distinct critical (red) family is reserved for
-  emergencies that must not be missed, so they stay visually prominent even when
-  another condition leads.
-- **Present vs denied findings** — asserted findings use a present (green)
-  family, explicitly ruled-out findings use a muted denied (rose) family.
-
-Numeric figures use tabular numerals, elevation is subtle (no neon glows), and
-all motion is short, purposeful, and respects `prefers-reduced-motion`.
+The hierarchy is deliberate: five leading considerations occupy the main board, a persistent **Safety watch** always shows every can't-miss condition, and non-emergency long-tail items remain available in a collapsed **Remaining differential** drawer. Only can't-miss rows receive a minimum visible bar; benign zero scores remain zero.
 
 ## Decision-support features
 
 Layered on top of the deterministic engine, the board column reads as headline
 intelligence:
 
-- **Suggested next question** — a prominent, deterministic recommendation of the
-  single most useful unasked finding. The engine picks the finding whose signed
-  weights most **separate** the current leading conditions (plain arithmetic, no
-  LLM), and explains which leaders it would pull apart. It updates live as the
-  consultation narrows, and shows a calm "no further discriminating question"
-  state when nothing is left to ask.
-- **Confidence / certainty meter** — a visible, evidence-scaled indicator
-  ("based on N findings — low / medium / high confidence"). It is driven by how
-  much evidence has accumulated, so an early high probability on thin evidence
-  deliberately reads as **low** confidence, reinforcing "decision support, not a
-  diagnosis".
+- **Highest-value information gap** — a deterministic, authored clinician-ready question chosen with pairwise leader contrast `Σ pᵢpⱼ|wᵢ-wⱼ|`. **Present** and **Absent** actions write to a separate clinician evidence layer and immediately update ranking, coverage, evidence history, and the next gap. Expected score contribution clearly exposes both branches for every leader: the authored signed weight if present and its exact sign reversal if absent.
+- **Evidence coverage** — an honest low/medium/high demo heuristic based on scenario-relevant answered findings and explicitly authored `safetyCue` metadata, supported by evidence count and top-two margin. Safety cues are conservative can't-miss screens, never inferred from every feature used by an emergency condition, and the metric is explicitly not clinical certainty.
+- **Visible evidence supersession** — scripted and clinician answers resolve by chronology. A later contradictory script becomes current for scoring and is labeled `scripted · overrides clinician`; a clinician answer entered afterward becomes current and is labeled `clinician · overrides scripted`. A superseded clinician answer can be explicitly reapplied from the source-trail chip. The transcript and source trail remain visible, so disagreement is never silently discarded.
 - **Multiple scenarios** — a clean scenario selector in the header switches
   between three scripted consultations: **chest pain → ACS**, **headache →
   migraine vs. subarachnoid hemorrhage** (the can't-miss red flag stays on the
@@ -120,13 +92,11 @@ microphone, fully offline in Chrome**:
 - **Deterministic, explainable scoring engine** — `frontend/src/tao/engine/`
   is pure arithmetic, not an LLM. Each condition starts from a prior, adds the
   signed weight of every asserted finding, applies the opposite sign for denied
-  findings, clamps to non-negative, and normalizes so probabilities sum to ~1.0.
-  Identical input always yields identical output, and every probability is
-  traceable to specific findings and weights. The **suggested-next-question**
-  selection (`nextQuestion.ts`) and the **confidence / certainty** derivation
-  (`confidence.ts`) are likewise pure, deterministic plain code — no LLM, no
-  network — so the same input always produces the same recommendation and the
-  same confidence band.
+  findings, clamps to non-negative, and normalizes to an **illustrative evidence
+  share**. The compatibility field is named `probability`, but the UI never
+  presents it as calibrated medical probability or risk. Identical input always
+  yields identical output, and every share is traceable to the baseline, signed
+  findings, raw/clamped score, pool total, and final equation.
 - **PubMed E-utilities as progressive enhancement** — `frontend/src/tao/pubmed.ts`
   layers a few live PubMed citations on top of the bundled references using the
   public NCBI `esearch`/`esummary` endpoints with **no API key**. Every call is
@@ -134,11 +104,11 @@ microphone, fully offline in Chrome**:
   empty list and the UI falls back to the **bundled references**. Rendering
   never blocks on the network.
 - **Scripted consultation playback** — `frontend/src/tao/engine/player.ts`
-  streams a timed `consultation` transcript so the full demo runs end-to-end
-  with no live input.
+  runs the bundled consultation with pause/resume, 1×/2× speed, next-evidence
+  stepping, restart, progress, and clean timer disposal.
 - **Optional Web Speech mic** — live microphone transcription is strictly
-  optional and fully guarded in try/catch, so a missing or blocked Web Speech
-  API never throws or breaks the demo.
+  optional and fully guarded. Recognized text is labeled **unreviewed** and is
+  transcript-only; it never silently changes the evidence score.
 
 ## Demo scenarios
 
@@ -163,10 +133,7 @@ header, each demonstrating a different strength of the board:
   toward acute coronary syndrome, demonstrating that TAO does not anchor on the
   first impression.
 
-Throughout any scenario, the transcript streams on the right, the probability
-board animates on the left (FLIP reorder + pulse + delta badges), the suggested
-next question and confidence meter update live, the findings rail fills in, and
-clicking a condition shows its "why" plus sources.
+Throughout any scenario, the bounded transcript updates alongside the top-five evidence board, persistent Safety watch, interactive information gap, Evidence coverage meter, and findings history. Clicking a condition opens its complete live score equation plus bundled and optional live sources.
 
 ## How TAO coexists with Benchwatch
 
