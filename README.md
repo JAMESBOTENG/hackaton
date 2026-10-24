@@ -1,3 +1,114 @@
+# TAO + Benchwatch
+
+This repository hosts two products that share one `frontend/` build:
+
+- **TAO** — the live diagnostic decision-support co-pilot and the **public demo**
+  deployed to GitHub Pages (the default route). Described first, below.
+- **Benchwatch** — the original protocol-aware lab-bench co-pilot (React
+  frontend + FastAPI/Python backend). **Unchanged**, and documented in full
+  after the TAO section.
+
+The deployed site at **https://jamesboteng.github.io/hackaton/** serves TAO by
+default. Benchwatch is still reachable from the same build via `?benchwatch=1`
+(offline replay) and `?live=1` (live WebSocket dashboard).
+
+---
+
+# TAO — Diagnostic Co-pilot
+
+**A live diagnostic decision-support co-pilot. A doctor talks naturally with a
+patient; TAO transcribes the conversation on the right and, on the left, shows a
+graphically clear, continuously-updating board of the conditions the patient
+might have. Click any condition to see *why* it is ranked where it is and the
+research sources behind it.**
+
+> ⚠️ **Decision support, not a diagnosis.** TAO is a demo/educational tool that
+> surfaces possibilities and their supporting evidence for a clinician to weigh.
+> It does not diagnose, and it never replaces clinical judgment. A disclaimer to
+> this effect is visible in the UI.
+
+## What TAO is
+
+As the consultation unfolds, each spoken finding (chest pain, radiation to the
+arm, leg swelling, a recent long-haul flight, and so on) feeds a scoring engine
+that reshuffles the probability board in real time. Emergencies that must not be
+missed stay on the radar even when another condition leads. Selecting a
+condition opens a detail view with:
+
+- the **findings that moved it** (the explainable "why", strongest first), and
+- **sources** — curated references bundled with the app, augmented by live
+  PubMed citations when the network allows.
+
+## How to run
+
+```bash
+cd frontend
+npm install
+npm run dev     # local dev server; the default route is TAO
+npm run build   # production build into frontend/dist/ (base /hackaton/)
+```
+
+Routes (all served by the same build):
+
+| URL / flag        | App                                                        |
+| ----------------- | ---------------------------------------------------------- |
+| *(default)*       | **TAO** diagnostic co-pilot (offline, no key, no backend)  |
+| `?benchwatch=1`   | Benchwatch offline **replay** dashboard                    |
+| `?live=1`         | Benchwatch **live** WebSocket dashboard (needs the backend)|
+
+## No-key, no-backend design
+
+TAO is built to demo flawlessly with **zero API keys, zero backend, zero
+microphone, fully offline in Chrome**:
+
+- **Bundled curated DEMO medical dataset** — fictional patient, conditions,
+  findings and references live in `frontend/src/tao/data/` (no real PII).
+- **Deterministic, explainable scoring engine** — `frontend/src/tao/engine/`
+  is pure arithmetic, not an LLM. Each condition starts from a prior, adds the
+  signed weight of every asserted finding, applies the opposite sign for denied
+  findings, clamps to non-negative, and normalizes so probabilities sum to ~1.0.
+  Identical input always yields identical output, and every probability is
+  traceable to specific findings and weights.
+- **PubMed E-utilities as progressive enhancement** — `frontend/src/tao/pubmed.ts`
+  layers a few live PubMed citations on top of the bundled references using the
+  public NCBI `esearch`/`esummary` endpoints with **no API key**. Every call is
+  wrapped so any failure (offline, CORS, timeout, rate-limit) resolves to an
+  empty list and the UI falls back to the **bundled references**. Rendering
+  never blocks on the network.
+- **Scripted consultation playback** — `frontend/src/tao/engine/player.ts`
+  streams a timed `consultation` transcript so the full demo runs end-to-end
+  with no live input.
+- **Optional Web Speech mic** — live microphone transcription is strictly
+  optional and fully guarded in try/catch, so a missing or blocked Web Speech
+  API never throws or breaks the demo.
+
+## Demo script (summary)
+
+A fictional patient, "Alex Rivera" (58), presents with chest pain over roughly a
+two-minute consultation:
+
+1. **~0–30s** — undifferentiated chest pain on exertion with risk factors;
+   acute coronary syndrome and stable angina lead while can't-miss emergencies
+   stay visible.
+2. **~30–75s** — radiation to the arm, sweating, nausea and breathlessness pull
+   acute coronary syndrome clearly ahead.
+3. **~75–120s** — pulmonary-embolism features (leg swelling, a recent flight)
+   are explored and the board narrows; reflux is explicitly ruled out.
+
+Throughout, the transcript streams on the right, the probability board animates
+on the left, and clicking a condition shows its "why" plus sources.
+
+## How TAO coexists with Benchwatch
+
+TAO is additive. All TAO code lives under `frontend/src/tao/`, and
+`frontend/src/main.tsx` is a small mode switch that defaults to TAO while
+keeping Benchwatch reachable at `?benchwatch=1` and `?live=1`. **Nothing in
+Benchwatch was removed or altered**: the Benchwatch backend (`backend/`), its
+live dashboard and its offline replay all remain intact and buildable. The
+sections below document Benchwatch unchanged.
+
+---
+
 # Benchwatch
 
 **A protocol-aware co-pilot that watches and listens at the lab bench, catches
@@ -250,5 +361,7 @@ that scrubs through the video with events marked on the timeline.
 This project is built spec-first. See `.kiro/specs/benchwatch/`
 (`requirements.md`, `design.md`, `tasks.md`), the steering doc
 `.kiro/steering/benchwatch-invariants.md`, and the hook
-`.kiro/hooks/run-backend-tests.kiro.hook`. The `.kiro/` directory is committed
-on purpose and must stay that way.
+`.kiro/hooks/run-backend-tests.kiro.hook`. TAO's story — its deterministic,
+explainable scoring engine and its no-key design — is captured in
+`.kiro/specs/tao/tao.md` and the steering doc `.kiro/steering/tao-invariants.md`.
+The `.kiro/` directory is committed on purpose and must stay that way.

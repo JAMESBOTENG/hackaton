@@ -1,9 +1,14 @@
-# Deploying the Benchwatch browser demo
+# Deploying the TAO browser demo
 
-This `docs/` folder is the committed, deployable static build of the Benchwatch
-browser-only replay demo. It is a self-contained static site: it opens **no**
-WebSocket and makes **no** API calls on the default route, so it runs entirely
-in the browser with no backend.
+This `docs/` folder is the committed, deployable static build of **TAO**, the
+browser-only diagnostic decision-support co-pilot. It is a self-contained static
+site: on the default route it opens **no** WebSocket and needs **no** API key,
+so it runs entirely in the browser with no backend and works fully offline.
+
+> The deployed site is now TAO, not the earlier Benchwatch replay demo.
+> Benchwatch is unchanged in the repo and still reachable from the same build at
+> `?benchwatch=1` (offline replay) and `?live=1` (live WebSocket dashboard,
+> which needs the FastAPI backend).
 
 ## Host
 
@@ -34,24 +39,33 @@ https://jamesboteng.github.io/hackaton/.
 
 ## Opening the demo
 
-Open https://jamesboteng.github.io/hackaton/ in Chrome. The demo **defaults to
-replay mode**, so the URL opens the fully offline, scripted demo directly — no
-flags or backend required. (The live WebSocket product flow is preserved and
-reachable at `?live=1`, but it needs the FastAPI backend and is not part of the
-public demo.)
+Open https://jamesboteng.github.io/hackaton/ in Chrome. The site **defaults to
+TAO**, so the URL opens the fully offline diagnostic co-pilot directly — no
+flags, no API key, and no backend required. A scripted doctor-patient
+consultation plays automatically: the transcript streams on the right while the
+probability board animates on the left, and clicking a condition reveals the
+"why" (the findings that moved it) plus its sources.
+
+Benchwatch is preserved and reachable from the same deployed build:
+
+- `?benchwatch=1` — the fully offline Benchwatch **replay** dashboard.
+- `?live=1` — the live Benchwatch WebSocket dashboard (needs the FastAPI
+  backend; not part of the public demo).
 
 ## Regenerating this artifact
 
 ```sh
 cd frontend
 npm install
-npm run build          # emits frontend/dist/
-# Replace only the build output, leaving committed files (DEPLOY.md, .nojekyll) in place.
-rm -rf ../docs/index.html ../docs/assets
-mkdir -p ../docs
-cp -r dist/. ../docs/
+npm run build          # emits frontend/dist/ (TAO default app, base /hackaton/)
+# Replace only the build output, preserving the committed DEPLOY.md and .nojekyll.
+rm -f ../docs/index.html
+rm -rf ../docs/assets
+cp ../frontend/dist/index.html ../docs/index.html
+cp -r ../frontend/dist/assets ../docs/assets
 touch ../docs/.nojekyll
 ```
 
 `frontend/dist/` is gitignored, which is why the build output is copied into
 this committed `docs/` directory — that is the artifact GitHub Pages serves.
+Always keep `docs/.nojekyll` and `docs/DEPLOY.md` in place when regenerating.
