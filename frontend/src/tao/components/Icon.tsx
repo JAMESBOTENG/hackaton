@@ -1,4 +1,4 @@
-interface Props { name: "play" | "pause" | "skip" | "restart" | "shield" | "question" | "mic" | "chevron" | "close"; size?: number; }
+interface Props { name: "play" | "pause" | "skip" | "restart" | "shield" | "question" | "mic" | "chevron" | "close" | "profile" | "bedside" | "laboratory" | "imaging" | "monitoring"; size?: number; }
 
 const paths: Record<Props["name"], React.ReactNode> = {
   play: <path d="m8 5 11 7-11 7V5Z" />,
@@ -10,6 +10,11 @@ const paths: Record<Props["name"], React.ReactNode> = {
   mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M6 11a6 6 0 0 0 12 0M12 17v4" /></>,
   chevron: <path d="m7 10 5 5 5-5" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
+  profile: <><circle cx="12" cy="8" r="3" /><path d="M5.5 20c.8-4 3-6 6.5-6s5.7 2 6.5 6" /></>,
+  bedside: <><path d="M4 19V8m0 7h16v4M8 11h5a3 3 0 0 1 3 3v1M8 11V8h4v3" /></>,
+  laboratory: <><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M8 15h8" /></>,
+  imaging: <><rect x="4" y="4" width="16" height="16" rx="2" /><circle cx="12" cy="12" r="5" /><path d="m9 13 2-2 4 4" /></>,
+  monitoring: <><path d="M3 12h4l2-5 4 10 2-5h6" /></>,
 };
 
 export default function Icon({ name, size = 18 }: Props) {

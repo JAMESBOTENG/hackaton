@@ -1,10 +1,9 @@
 /**
  * TAO — deterministic engine self-check (DEV only).
  *
- * ⚠️ DEMO / EDUCATIONAL. There is no frontend unit-test runner, so this module
- * is the correctness anchor for the newer engine math (suggested next question
- * + evidence confidence). It asserts a handful of invariants at startup and,
- * like the unknown-finding-id check in score.ts, runs ONLY under
+ * Vitest provides the CI correctness anchor; this lightweight DEV check keeps
+ * assumptions loud during development. Like the unknown-finding-id check in
+ * score.ts, it runs ONLY under
  * import.meta.env?.DEV and NEVER throws in production — failures are reported
  * with console.warn so a broken assumption is loud in development but can never
  * break the shipped demo.
@@ -18,6 +17,7 @@ import { evidenceConfidence } from "./confidence";
 import { resolveEvidence } from "./evidence";
 import { TranscriptPlayer } from "./player";
 import { scenariosById, defaultScenarioId } from "../data/scenarios";
+import { validateTaoData } from "../data/validate";
 
 /** Collected failure messages; empty means all invariants held. */
 function check(): string[] {
@@ -25,6 +25,7 @@ function check(): string[] {
   const assert = (ok: boolean, msg: string) => {
     if (!ok) failures.push(msg);
   };
+  failures.push(...validateTaoData());
 
   const scenario = scenariosById[defaultScenarioId];
   const pool = scenario?.conditionPool;

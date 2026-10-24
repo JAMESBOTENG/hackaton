@@ -7,8 +7,17 @@ export default function FindingsRail({ items, onReapplyClinician }: { items: Res
     {items.length === 0 ? <p className="tao-empty-copy">No evidence committed yet. Start playback or answer the information gap.</p> : <div className="tao-findings-scroll">{items.map((item) => {
       const finding = findingsById[item.findingId];
       const label = item.status === "absent" ? finding?.negationLabel ?? `No ${finding?.label.toLowerCase()}` : finding?.label;
-      const source = item.supersedes ? `${item.source} · overrides ${item.supersedes}` : item.source;
-      return <span key={item.findingId} className={`tao-finding-chip is-${item.status} ${item.supersedes ? "has-override" : ""}`} title={item.supersedes ? `Later ${item.source} evidence supersedes contradictory ${item.supersedes} evidence.` : `Current source: ${item.source}`}><i />{label}<small>{source}</small>{item.source === "scripted" && item.supersedes === "clinician" && item.supersededStatus && <button type="button" onClick={() => onReapplyClinician(item.findingId, item.supersededStatus === "present")}>Reapply clinician {item.supersededStatus}</button>}</span>;
+      const provenance = [
+        item.source,
+        item.corroboratedBy?.length ? `corroborates ${item.corroboratedBy.join(" + ")}` : "",
+        item.supersedes ? `overrides ${item.supersedes}` : "",
+      ].filter(Boolean).join(" · ");
+      const title = [
+        `Current source: ${item.source}.`,
+        item.corroboratedBy?.length ? `Same-value corroboration: ${item.corroboratedBy.join(", ")}.` : "",
+        item.supersedes ? `Later ${item.source} evidence supersedes contradictory ${item.supersedes} evidence.` : "",
+      ].filter(Boolean).join(" ");
+      return <span key={item.findingId} className={`tao-finding-chip is-${item.status} ${item.supersedes ? "has-override" : ""}`} title={title}><i />{label}<small>{provenance}</small>{item.source === "scripted" && item.supersedes === "clinician" && item.supersededStatus && <button type="button" onClick={() => onReapplyClinician(item.findingId, item.supersededStatus === "present")}>Reapply clinician {item.supersededStatus}</button>}</span>;
     })}</div>}
   </section>;
 }

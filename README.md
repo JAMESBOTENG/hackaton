@@ -31,7 +31,8 @@ that reshuffles the evidence-alignment board in real time. Emergencies that must
 missed stay on the radar even when another condition leads. Selecting a
 condition opens a detail view with:
 
-- the **findings that moved it** (the explainable "why", strongest first), and
+- the **findings that moved it** (the explainable "why", strongest first),
+- condition-specific **investigation options** linked to authored rationales, and
 - **sources** — curated references bundled with the app, augmented by live
   PubMed citations when the network allows.
 
@@ -46,9 +47,11 @@ The hierarchy is deliberate: five leading considerations occupy the main board, 
 Layered on top of the deterministic engine, the board column reads as headline
 intelligence:
 
+- **Structured fictional patient chart** — each scenario carries typed demographics, vitals, history, medications, allergies, and social/family context behind a compact always-available profile control. Only explicit `initialEvidence` finding IDs enter ranking as earliest `chart` evidence; every item has a nonempty authored basis naming the exact visible chart or complaint fact, which the profile renders and data validation enforces. Profile prose is never parsed.
+- **Suggested investigations** — a compact control opens an accessible overlay of authored bedside, laboratory, imaging, and monitoring options. Selection includes the top three leaders only when pool normalization is available, plus every safety-watch condition at all times (even at zero). It deduplicates tests while retaining every condition reason, displays each reason's own urgency and all applicable roles, and sorts by promoted urgency, safety relevance, best rank, then ID. A zero-total pool therefore yields safety-watch reasons only, never arbitrary lexical leaders. Wording remains “consider”/“discuss”; the feature is not an order set and does not claim confirmation.
 - **Highest-value information gap** — a deterministic, authored clinician-ready question chosen with pairwise leader contrast `Σ pᵢpⱼ|wᵢ-wⱼ|`. **Present** and **Absent** actions write to a separate clinician evidence layer and immediately update ranking, coverage, evidence history, and the next gap. Expected score contribution clearly exposes both branches for every leader: the authored signed weight if present and its exact sign reversal if absent.
 - **Evidence coverage** — an honest low/medium/high demo heuristic based on scenario-relevant answered findings and explicitly authored `safetyCue` metadata, supported by evidence count and top-two margin. Safety cues are conservative can't-miss screens, never inferred from every feature used by an emergency condition, and the metric is explicitly not clinical certainty.
-- **Visible evidence supersession** — scripted and clinician answers resolve by chronology. A later contradictory script becomes current for scoring and is labeled `scripted · overrides clinician`; a clinician answer entered afterward becomes current and is labeled `clinician · overrides scripted`. A superseded clinician answer can be explicitly reapplied from the source-trail chip. The transcript and source trail remain visible, so disagreement is never silently discarded.
+- **Visible evidence supersession and corroboration** — chart, scripted, and clinician answers resolve by chronology. A later contradictory statement becomes current for scoring and is labeled with its source/override; a same-polarity restatement is retained as corroboration but does not masquerade as a score change or board link. The findings rail shows current provenance, corroborating sources, and the most recent contradictory source/status; a superseded clinician answer can be explicitly reapplied.
 - **Multiple scenarios** — a clean scenario selector in the header switches
   between three scripted consultations: **chest pain → ACS**, **headache →
   migraine vs. subarachnoid hemorrhage** (the can't-miss red flag stays on the
@@ -71,7 +74,8 @@ intelligence:
 cd frontend
 npm install
 npm run dev     # local dev server; the default route is TAO
-npm run build   # production build into frontend/dist/ (base /hackaton/)
+npm test          # fast deterministic Vitest engine/data checks
+npm run build     # production build into frontend/dist/ (base /hackaton/)
 ```
 
 Routes (all served by the same build):
@@ -82,10 +86,12 @@ Routes (all served by the same build):
 | `?benchwatch=1`   | Benchwatch offline **replay** dashboard                    |
 | `?live=1`         | Benchwatch **live** WebSocket dashboard (needs the backend)|
 
-## No-key, no-backend design
+## No-key, no-backend, offline-first design
 
-TAO is built to demo flawlessly with **zero API keys, zero backend, zero
-microphone, fully offline in Chrome**:
+TAO's core case workflow demos with **zero API keys, zero backend, zero
+microphone, and no network in Chrome**. Optional live PubMed enhancement and
+opening external source links require connectivity; neither affects the bundled
+case, scoring, investigation plan, or rendering:
 
 - **Bundled curated DEMO medical dataset** — fictional patient, conditions,
   findings and references live in `frontend/src/tao/data/` (no real PII).
@@ -104,8 +110,9 @@ microphone, fully offline in Chrome**:
   empty list and the UI falls back to the **bundled references**. Rendering
   never blocks on the network.
 - **Scripted consultation playback** — `frontend/src/tao/engine/player.ts`
-  runs the bundled consultation with pause/resume, 1×/2× speed, next-evidence
-  stepping, restart, progress, and clean timer disposal.
+  runs the bundled consultation after the clinician explicitly presses **Play**
+  (it does not autoplay on first load), with pause/resume, 1×/2× speed,
+  next-evidence stepping, restart-with-playback, progress, and clean timer disposal.
 - **Optional Web Speech mic** — live microphone transcription is strictly
   optional and fully guarded. Recognized text is labeled **unreviewed** and is
   transcript-only; it never silently changes the evidence score.
