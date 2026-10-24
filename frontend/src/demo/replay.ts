@@ -10,7 +10,11 @@
  * inter-event deltas, and the step-4 incubation countdown is ticked smoothly
  * (in scaled seconds) between the start of incubation (step 3 completed) and
  * the recorded warning / overrun so the viewer visibly sees it count down,
- * turn amber at the 50s mark, and overrun.
+ * turn amber at the 50s mark, and overrun. That countdown is synthesized from
+ * wall-clock scaled back to recorded seconds, so its visible amber flip and
+ * overrun are presentation pacing that approximately coincides with (but is
+ * not exactly locked to) the recorded timer_warning / timer_overrun events;
+ * because the two run off independent clocks they can differ by ~1s.
  *
  * No WebSocket, no fetch, no camera, no mic. Everything is derived from the
  * bundled log.
@@ -228,9 +232,10 @@ export class ReplayEngine {
    * Drive the incubation countdown smoothly. The recorded incubation starts
    * when step 3 completes (startTs) and runs for duration_s nominal. We tick in
    * real wall-clock but convert elapsed real time back into recorded seconds
-   * via the scale factor so the displayed remaining time matches the recorded
-   * run (reaching the warn mark and overrunning in lockstep with the recorded
-   * timer_warning / timer_overrun events).
+   * via the scale factor so the displayed remaining time tracks the recorded
+   * run. The amber flip and overrun this produces are recomputed from elapsed
+   * time, so they approximately coincide with (but are not exactly locked to)
+   * the recorded timer_warning / timer_overrun events and may differ by ~1s.
    */
   private startIncubationTimer(startTs: number) {
     this.incubateStartTs = startTs;

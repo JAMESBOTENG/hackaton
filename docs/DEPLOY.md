@@ -46,8 +46,9 @@ public demo.)
 cd frontend
 npm install
 npm run build          # emits frontend/dist/
-# then copy the fresh build into docs/
-rm -rf ../docs && mkdir -p ../docs
+# Replace only the build output, leaving committed files (DEPLOY.md, .nojekyll) in place.
+rm -rf ../docs/index.html ../docs/assets
+mkdir -p ../docs
 cp -r dist/. ../docs/
 touch ../docs/.nojekyll
 ```
