@@ -1,8 +1,9 @@
 import type { ConsultationTurn } from "../data/consultation";
+import type { InitialEvidence } from "../data/scenarios";
 import type { FindingState } from "./score";
 
 export type EvidenceStatus = "present" | "absent";
-export type EvidenceSource = "scripted" | "clinician";
+export type EvidenceSource = "chart" | "scripted" | "clinician";
 
 /** A clinician answer is ordered after every scripted turn visible when entered. */
 export interface ManualEvidenceAnswer {
@@ -15,72 +16,99 @@ export interface ResolvedEvidenceItem {
   findingId: string;
   status: EvidenceStatus;
   source: EvidenceSource;
+  /** Earlier sources that independently stated the same effective value. */
+  corroboratedBy?: EvidenceSource[];
   /** Present only when a contradictory earlier source was visibly superseded. */
   supersedes?: EvidenceSource;
   /** Earlier contradictory value, retained so a clinician can re-apply it. */
   supersededStatus?: EvidenceStatus;
 }
 
-interface ScriptedAnswer {
-  status: EvidenceStatus;
-  turnIndex: number;
+export interface EvidenceChange {
+  source: EvidenceSource;
+  findingIds: string[];
 }
 
+interface Candidate {
+  findingId: string;
+  status: EvidenceStatus;
+  source: EvidenceSource;
+  position: number;
+  revision: number;
+}
+
+const later = (left: Candidate, right: Candidate) =>
+  left.position - right.position || left.revision - right.revision || left.findingId.localeCompare(right.findingId);
+const sameBatch = (left: Candidate, right: Candidate) =>
+  left.position === right.position && left.revision === right.revision && left.source === right.source;
+
 /**
- * Resolve authored and clinician evidence by explicit chronology.
- * A later scripted claim supersedes an earlier clinician answer; a clinician
- * answer entered after that script supersedes it in turn. This is deterministic
- * and returns both the effective scoring state and visible provenance.
+ * Resolve chart, authored script, and clinician evidence by explicit chronology.
+ * Chart evidence is earliest. Later same-polarity statements corroborate the
+ * effective value without counting as score changes; contradictions supersede
+ * it visibly. Assertion/negation is never inferred from profile prose.
  */
 export function resolveEvidence(
   transcript: ConsultationTurn[],
-  manual: Record<string, ManualEvidenceAnswer>
-): { state: FindingState; items: ResolvedEvidenceItem[] } {
-  const scripted = new Map<string, ScriptedAnswer>();
-  transcript.forEach((turn, zeroBasedIndex) => {
-    const turnIndex = zeroBasedIndex + 1;
-    for (const findingId of turn.revealsFindings ?? []) {
-      scripted.set(findingId, { status: "present", turnIndex });
-    }
-    for (const findingId of turn.negatesFindings ?? []) {
-      scripted.set(findingId, { status: "absent", turnIndex });
-    }
-  });
+  manual: Record<string, ManualEvidenceAnswer>,
+  chart: InitialEvidence[] = []
+): { state: FindingState; items: ResolvedEvidenceItem[]; latestChange: EvidenceChange | null } {
+  const candidates = new Map<string, Candidate[]>();
+  const add = (candidate: Candidate) => candidates.set(
+    candidate.findingId,
+    [...(candidates.get(candidate.findingId) ?? []), candidate]
+  );
 
-  const ids = new Set([...scripted.keys(), ...Object.keys(manual)]);
-  const ordered = [...ids].map((findingId) => {
-    const scriptAnswer = scripted.get(findingId);
-    const manualAnswer = manual[findingId];
-    const scriptIsLater = Boolean(
-      scriptAnswer && manualAnswer && scriptAnswer.turnIndex > manualAnswer.afterTurnIndex
-    );
-    const source: EvidenceSource = scriptAnswer && (!manualAnswer || scriptIsLater)
-      ? "scripted"
-      : "clinician";
-    const current = source === "scripted" ? scriptAnswer! : manualAnswer!;
-    const prior = source === "scripted" ? manualAnswer : scriptAnswer;
-    const order = source === "scripted"
-      ? scriptAnswer!.turnIndex * 2
-      : manualAnswer!.afterTurnIndex * 2 + 1;
+  chart.forEach((item) => add({ findingId: item.findingId, status: item.status, source: "chart", position: 0, revision: 0 }));
+  transcript.forEach((turn, zeroBasedIndex) => {
+    const position = (zeroBasedIndex + 1) * 2;
+    for (const findingId of turn.revealsFindings ?? []) add({ findingId, status: "present", source: "scripted", position, revision: 0 });
+    for (const findingId of turn.negatesFindings ?? []) add({ findingId, status: "absent", source: "scripted", position, revision: 0 });
+  });
+  for (const [findingId, answer] of Object.entries(manual)) {
+    add({ findingId, status: answer.status, source: "clinician", position: answer.afterTurnIndex * 2 + 1, revision: answer.revision });
+  }
+
+  const resolved = [...candidates.entries()].map(([findingId, values]) => {
+    const chronological = [...values].sort(later);
+    const current = chronological[chronological.length - 1];
+    const earlier = chronological.slice(0, -1);
+    const contradictory = [...earlier].reverse().find((item) => item.status !== current.status);
+    const corroboratedBy = [...new Set(
+      earlier
+        .filter((item) => item.status === current.status && item.source !== current.source)
+        .map((item) => item.source)
+    )];
     return {
-      order,
+      current,
       item: {
         findingId,
         status: current.status,
-        source,
-        ...(prior && prior.status !== current.status ? {
-          supersedes: source === "scripted" ? "clinician" as const : "scripted" as const,
-          supersededStatus: prior.status,
-        } : {}),
-      },
+        source: current.source,
+        ...(corroboratedBy.length ? { corroboratedBy } : {}),
+        ...(contradictory ? { supersedes: contradictory.source, supersededStatus: contradictory.status } : {}),
+      } satisfies ResolvedEvidenceItem,
     };
-  }).sort((a, b) => a.order - b.order || a.item.findingId.localeCompare(b.item.findingId));
+  }).sort((a, b) => later(a.current, b.current));
 
   const asserted: string[] = [];
   const negated: string[] = [];
-  for (const { item } of ordered) {
-    (item.status === "present" ? asserted : negated).push(item.findingId);
-  }
+  for (const { item } of resolved) (item.status === "present" ? asserted : negated).push(item.findingId);
 
-  return { state: { asserted, negated }, items: ordered.map(({ item }) => item) };
+  const allCandidates = [...candidates.values()].flat().sort(later);
+  const newest = allCandidates[allCandidates.length - 1];
+  const changedIds = newest ? allCandidates
+    .filter((candidate) => sameBatch(candidate, newest))
+    .filter((candidate) => {
+      const preceding = (candidates.get(candidate.findingId) ?? [])
+        .filter((item) => later(item, candidate) < 0)
+        .sort(later);
+      const prior = preceding[preceding.length - 1];
+      return !prior || prior.status !== candidate.status;
+    })
+    .map((candidate) => candidate.findingId)
+    .sort() : [];
+  const latestChange = newest && changedIds.length ? { source: newest.source, findingIds: changedIds } : null;
+
+  return { state: { asserted, negated }, items: resolved.map(({ item }) => item), latestChange };
 }

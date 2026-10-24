@@ -3,7 +3,9 @@
 This `docs/` folder is the committed, deployable static build of **TAO**, the
 browser-only diagnostic decision-support co-pilot. It is a self-contained static
 site: on the default route it opens **no** WebSocket and needs **no** API key,
-so it runs entirely in the browser with no backend and works fully offline.
+so its bundled case workflow, scoring, chart, and investigation plan work with no
+backend or network. Optional PubMed results and external source links still
+require connectivity.
 
 > The deployed site is now TAO, not the earlier Benchwatch replay demo.
 > Benchwatch is unchanged in the repo and still reachable from the same build at
@@ -40,11 +42,13 @@ https://jamesboteng.github.io/hackaton/.
 ## Opening the demo
 
 Open https://jamesboteng.github.io/hackaton/ in Chrome. The site **defaults to
-TAO**, so the URL opens the fully offline diagnostic co-pilot directly — no
-flags, no API key, and no backend required. A scripted doctor-patient
-consultation plays automatically: the transcript streams on the right while the
-probability board animates on the left, and clicking a condition reveals the
-"why" (the findings that moved it) plus its sources.
+TAO**, so the URL opens the offline-first diagnostic co-pilot directly — no
+flags, API key, backend, or network is required for the core workflow. Press the
+blue **Play** control to start the scripted consultation; first load does not
+autoplay. The transcript streams on the right while the evidence-share board
+animates on the left. The patient profile and Suggested investigations open as
+overlays without expanding the page; clicking a condition reveals the "why",
+relevant investigation options, and sources.
 
 Benchwatch is preserved and reachable from the same deployed build:
 
@@ -57,6 +61,7 @@ Benchwatch is preserved and reachable from the same deployed build:
 ```sh
 cd frontend
 npm install
+npm test               # deterministic engine/data integrity checks
 npm run build          # emits frontend/dist/ (TAO default app, base /hackaton/)
 # Replace only the build output, preserving the committed DEPLOY.md and .nojekyll.
 rm -f ../docs/index.html
