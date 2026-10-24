@@ -1,0 +1,236 @@
+{
+  "protocol_name": "Demo colorimetric assay",
+  "events": [
+    {
+      "source": "vision",
+      "type": "bottle_lifted",
+      "step_id": null,
+      "payload": {
+        "bottle": "buffer_a"
+      },
+      "timestamp": 1700000002.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_over_target",
+      "step_id": null,
+      "payload": {
+        "bottle": "buffer_a"
+      },
+      "timestamp": 1700000004.0
+    },
+    {
+      "source": "engine",
+      "type": "step_completed",
+      "step_id": 1,
+      "payload": {
+        "step_id": 1,
+        "step_type": "add",
+        "description": "Add Buffer A to the sample",
+        "reagent": "buffer_a"
+      },
+      "timestamp": 1700000004.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_returned",
+      "step_id": null,
+      "payload": {
+        "bottle": "buffer_a"
+      },
+      "timestamp": 1700000005.0
+    },
+    {
+      "source": "audio",
+      "type": "step_done",
+      "step_id": 2,
+      "payload": {},
+      "timestamp": 1700000008.0
+    },
+    {
+      "source": "engine",
+      "type": "step_completed",
+      "step_id": 2,
+      "payload": {
+        "step_id": 2,
+        "step_type": "mix",
+        "description": "Swirl to mix",
+        "reagent": null
+      },
+      "timestamp": 1700000008.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_lifted",
+      "step_id": null,
+      "payload": {
+        "bottle": "stop"
+      },
+      "timestamp": 1700000011.0
+    },
+    {
+      "source": "engine",
+      "type": "deviation",
+      "step_id": 3,
+      "payload": {
+        "lifted": "stop",
+        "lifted_label": "Stop Solution",
+        "expected": "reagent_b",
+        "expected_label": "Reagent B",
+        "due_step_id": 3,
+        "due_step_description": "Add Reagent B",
+        "message": "That's the Stop Solution, you're on step 3, Reagent B."
+      },
+      "timestamp": 1700000011.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_returned",
+      "step_id": null,
+      "payload": {
+        "bottle": "stop"
+      },
+      "timestamp": 1700000012.0
+    },
+    {
+      "source": "audio",
+      "type": "observation",
+      "step_id": 3,
+      "payload": {
+        "text": "the yellow looks a little paler than last time"
+      },
+      "timestamp": 1700000013.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_lifted",
+      "step_id": null,
+      "payload": {
+        "bottle": "reagent_b"
+      },
+      "timestamp": 1700000015.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_over_target",
+      "step_id": null,
+      "payload": {
+        "bottle": "reagent_b"
+      },
+      "timestamp": 1700000017.0
+    },
+    {
+      "source": "engine",
+      "type": "step_completed",
+      "step_id": 3,
+      "payload": {
+        "step_id": 3,
+        "step_type": "add",
+        "description": "Add Reagent B",
+        "reagent": "reagent_b"
+      },
+      "timestamp": 1700000017.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_returned",
+      "step_id": null,
+      "payload": {
+        "bottle": "reagent_b"
+      },
+      "timestamp": 1700000018.0
+    },
+    {
+      "source": "engine",
+      "type": "timer_warning",
+      "step_id": 4,
+      "payload": {
+        "step_id": 4,
+        "elapsed_s": 51.0,
+        "warn_at_s": 50.0,
+        "duration_s": 60.0,
+        "message": "Incubation reached 50s of 60s."
+      },
+      "timestamp": 1700000068.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_lifted",
+      "step_id": null,
+      "payload": {
+        "bottle": "stop"
+      },
+      "timestamp": 1700000083.0
+    },
+    {
+      "source": "engine",
+      "type": "step_completed",
+      "step_id": 4,
+      "payload": {
+        "step_id": 4,
+        "step_type": "incubate",
+        "description": "Incubate",
+        "reagent": null
+      },
+      "timestamp": 1700000083.0
+    },
+    {
+      "source": "engine",
+      "type": "timer_overrun",
+      "step_id": 4,
+      "payload": {
+        "step_id": 4,
+        "elapsed_s": 66.0,
+        "duration_s": 60.0,
+        "overrun_s": 6.0,
+        "message": "Incubation overran by 6.0s."
+      },
+      "timestamp": 1700000083.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_over_target",
+      "step_id": null,
+      "payload": {
+        "bottle": "stop"
+      },
+      "timestamp": 1700000085.0
+    },
+    {
+      "source": "engine",
+      "type": "step_completed",
+      "step_id": 5,
+      "payload": {
+        "step_id": 5,
+        "step_type": "add",
+        "description": "Add Stop Solution",
+        "reagent": "stop"
+      },
+      "timestamp": 1700000085.0
+    },
+    {
+      "source": "engine",
+      "type": "session_complete",
+      "step_id": null,
+      "payload": {
+        "completed_steps": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "timestamp": 1700000085.0
+    },
+    {
+      "source": "vision",
+      "type": "bottle_returned",
+      "step_id": null,
+      "payload": {
+        "bottle": "stop"
+      },
+      "timestamp": 1700000086.0
+    }
+  ]
+}

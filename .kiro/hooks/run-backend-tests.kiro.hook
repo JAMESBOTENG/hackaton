@@ -1,0 +1,17 @@
+{
+  "name": "Run backend tests on save",
+  "description": "Runs the pytest suite (protocol loader + engine property tests) whenever a backend source or test file is saved, to keep the deterministic engine green.",
+  "version": 1,
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/app/**/*.py",
+      "backend/tests/**/*.py",
+      "backend/protocols/**/*.yaml"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "backend/.venv/bin/python -m pytest backend/tests -q"
+  }
+}

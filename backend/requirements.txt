@@ -1,0 +1,37 @@
+# Benchwatch backend dependencies
+# Web / WebSocket server
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+websockets==13.1
+
+# Protocol + data models
+pyyaml==6.0.2
+pydantic==2.9.2
+numpy==1.26.4
+
+# Vision: opencv-contrib ships the ArUco module; -headless avoids display/GL libs
+opencv-contrib-python-headless==4.10.0.84
+
+# Audio: local transcription + capture
+# NOTE: faster-whisper's utils import `requests` at module load (used by its
+# HuggingFace download path) but does not declare it, so pin it explicitly so a
+# real WhisperModel load works on a machine with a mic. The model load is lazy
+# and guarded, so a missing model/network never breaks the vision-only core.
+faster-whisper==1.0.3
+requests==2.32.3
+sounddevice==0.5.1
+
+# LLM language layer
+anthropic==0.39.0
+
+# NOTE: MediaPipe Hands is OPTIONAL and intentionally NOT listed here.
+# mediapipe==0.10.14 depends on the NON-headless opencv-contrib-python, whose
+# native libs shadow opencv-contrib-python-headless and break `import cv2` in a
+# headless environment (libGL.so.1 missing). This base install stays fully
+# headless. To enable optional hand-gating on a machine with GL libs, install
+# backend/requirements-optional.txt as well.
+
+# Testing (httpx backs FastAPI's TestClient used by the server smoke tests)
+pytest==8.3.3
+hypothesis==6.112.1
+httpx==0.28.1

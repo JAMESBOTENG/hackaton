@@ -1,0 +1,12 @@
+name: Demo colorimetric assay
+reagents:
+  buffer_a:   { label: "Buffer A",      cap_color: blue,   zone: 1 }
+  reagent_b:  { label: "Reagent B",     cap_color: yellow, zone: 2 }
+  stop:       { label: "Stop Solution", cap_color: red,    zone: 3 }
+target_zone: 4
+steps:
+  - { id: 1, type: add,      reagent: buffer_a, description: "Add Buffer A to the sample" }
+  - { id: 2, type: mix,      description: "Swirl to mix" }
+  - { id: 3, type: add,      reagent: reagent_b, description: "Add Reagent B" }
+  - { id: 4, type: incubate, duration_s: 60, warn_at_s: 50, description: "Incubate" }
+  - { id: 5, type: add,      reagent: stop, description: "Add Stop Solution" }

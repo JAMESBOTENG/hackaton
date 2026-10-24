@@ -1,0 +1,27 @@
+# Benchwatch OPTIONAL backend dependencies
+#
+# These are NOT required for the core vision + engine + server flow, which runs
+# fully headless from the base backend/requirements.txt alone.
+#
+# MediaPipe Hands can be used to gate vision lift detection on an actual hand
+# being present (reducing shadow false positives). It is strictly optional:
+# app/vision.py guards the import (MEDIAPIPE_AVAILABLE) and every core path
+# works without it.
+#
+# WARNING: mediapipe==0.10.14 pulls in the NON-headless opencv-contrib-python,
+# whose native libraries shadow opencv-contrib-python-headless in site-packages
+# and require system GL libraries (libGL.so.1). Only install this on a machine
+# that has those libraries (i.e. NOT the headless sandbox). Installing it in a
+# headless environment will break `import cv2`.
+#
+# Usage (on a GL-capable machine, into the same venv):
+#   backend/.venv/bin/pip install -r backend/requirements-optional.txt
+
+mediapipe==0.10.14
+
+# PDF export of the end-of-session report is OPTIONAL. The report is always
+# available as Markdown; app/report.py's export_pdf() guards this import and
+# returns None (never raises) when fpdf2 is not installed, so the core flow and
+# the test suite never depend on it. Install only if you want PDF export:
+#   backend/.venv/bin/pip install fpdf2
+fpdf2==2.7.9

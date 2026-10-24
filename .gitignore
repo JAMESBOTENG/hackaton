@@ -1,0 +1,24 @@
+# Python / backend
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Runtime session logs written on session end
+backend/sessions/
+
+# Local environment / secrets
+.env
+.env.*
+
+# OS cruft
+.DS_Store
+
+# NOTE: the Kiro config directory is intentionally NOT ignored. It holds specs,
+# steering docs and hooks that MUST remain committed (hard hackathon rule). Do
+# not add it here.
