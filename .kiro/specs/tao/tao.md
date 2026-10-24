@@ -1,195 +1,63 @@
-# TAO — Diagnostic Co-pilot (spec)
+# TAO — Clinical Reasoning Cockpit (generation 2)
 
-TAO is a live diagnostic **decision-support** co-pilot that rides along with a
-real doctor-patient conversation. The clinician talks naturally; TAO transcribes
-the conversation on the right of the screen and, on the left, shows a
-graphically clear, continuously-updating board of the conditions the patient
-might have. Clicking a condition reveals *why* it is ranked where it is and the
-research sources behind it.
+TAO is a browser-only diagnostic **decision-support** demonstration. It ranks possibilities and exposes the arithmetic behind each rank; it does not diagnose or replace clinical judgment. The visible product disclaimer is permanent.
 
-> ⚠️ **Decision support, not a diagnosis.** TAO surfaces possibilities and their
-> supporting evidence for a clinician to weigh. It does not diagnose and never
-> replaces clinical judgment. A disclaimer is visible in the UI.
+## Product contract
 
-## Goals
+- Default route works with no API key, backend, microphone, or network in Chrome.
+- All patients and scenarios are fictional. The three bundled scenarios are chest pain, headache, and late-twist anti-anchoring.
+- `?benchwatch=1` and `?live=1` remain Benchwatch routes. Vite base remains `/hackaton/`.
+- The main cockpit is optimized for a 1440×900 viewport: compact case context and controls, persistent safety watch, five leading considerations, a collapsed remaining differential, and a sticky bounded transcript.
 
-1. A doctor and patient talk; the transcript streams on the right.
-2. A probability board on the left shows, graphically, the likely conditions and
-   reshuffles as findings are revealed.
-3. Clicking a condition shows the explainable "why" (the findings that moved it)
-   plus research sources.
-4. "Research on all the medical data out there, the bigger the pool the better":
-   curated bundled references, augmented live by PubMed when the network allows.
-5. Ship with **zero API keys**, **zero backend**, offline-capable in the browser.
+## Honest evidence language
 
-## Deterministic, explainable scoring engine
+The deterministic scorer starts from an illustrative baseline, adds each applicable signed finding weight, reverses that sign for explicitly absent evidence, clamps at zero, and divides by the total clamped pool score. The compatibility field remains named `probability`, but every user-facing value is called **evidence alignment**, **relative evidence**, or **normalized evidence share**. Whole-number percent bars are an illustrative mental model, not calibrated medical probability or clinical risk.
 
-The ranking is pure plain-code arithmetic in `frontend/src/tao/engine/score.ts`,
-never an LLM. For each condition:
+Every `ScoredCondition` includes baseline, every applied signed contribution, raw score, clamped score, total pool score, and normalized share. The condition detail dialog renders the complete equation and separates Raised by from Lowered by. Identical evidence always gives identical output; no LLM or network participates.
 
-1. Start from the condition's `prior` (baseline weight).
-2. Add the signed weight of every **asserted** finding the condition cares about.
-3. For every explicitly **negated** (denied) finding, add the opposite-sign
-   weight, so negation is symmetric and inspectable.
-4. Clamp the raw score to be non-negative.
-5. Normalize scores across all conditions by simple division (not softmax) so a
-   condition's probability is literally its share of the total evidence weight.
+## Differential hierarchy and safety
 
-The function is pure and deterministic: identical input always yields identical
-output, every probability is traceable to specific findings and weights, and
-can't-miss emergencies are flagged so they stay on the radar.
+`ProbabilityBoard` renders the top five current leaders. `SafetyWatch` independently renders every can't-miss condition, including emergencies outside the top five. `RemainingDifferential` contains non-emergency conditions outside the leading board and is collapsed by default. Only can't-miss conditions receive a 2% minimum visual bar; a benign zero remains visually zero.
 
-You can read the normalization as a transparent, offline analogue of Bayesian
-updating: each condition's `prior` is its baseline plausibility, each signed
-finding weight behaves like a log-likelihood-ratio nudge for or against the
-condition, and the final share-of-total normalization turns the accumulated
-evidence into a posterior-style probability. The important part is that this is
-**plain arithmetic in code, not a model** — there is no softmax, no LLM, and no
-network — so the "Bayesian" framing is only a reading of the math, never a
-change to it.
+## Deterministic information gap
 
-### Suggested next question (deterministic)
+Every finding carries an authored clinician-ready `questionPrompt`. Answered findings are excluded. For each candidate finding among the leading conditions, the engine computes:
 
-`frontend/src/tao/engine/nextQuestion.ts` adds a pure
-`suggestNextQuestion(scored, state, opts?)` that recommends the single
-highest-value **unasked** finding — the one that would most **separate** the
-current leading conditions. It is plain arithmetic, never an LLM:
+`Σ(i<j) p_i × p_j × |w_i − w_j|`
 
-1. Take the current top-K leaders (default `DEFAULT_TOP_K = 4`) by probability.
-2. For every finding not already asserted or negated, compute a **separation
-   score** = the max-minus-min of each leader's `(signed finding weight × that
-   leader's current probability)`. Large, opposing weights across the leaders
-   score high because asking about that finding pulls them apart.
-3. Pick the highest-separation finding; ties break deterministically by finding
-   id (smaller id wins) so identical input yields identical output.
-4. Return the finding id, a human-readable `prompt`, the `separation` value, and
-   the `separates` leaders so the UI can explain *why* it is worth asking.
-   Return `null` when there are fewer than two leaders or no discriminating
-   finding remains.
+where `p` is current normalized evidence share and `w` is the signed authored finding weight. The highest score wins, with stable finding-id tie-breaking. The card exposes two score-contribution branches for each leader: the authored signed weight if the finding is Present and the exact reversed sign if it is Absent. Present/Absent actions write to a separate clinician-entered evidence layer.
 
-### Confidence / certainty (deterministic)
+Scripted and clinician evidence resolve deterministically by chronology. A contradictory scripted assertion delivered after an earlier manual answer becomes current for scoring and is visibly labeled `scripted · overrides clinician`; a later clinician answer becomes current and is labeled `clinician · overrides scripted`. A superseded clinician answer can be explicitly reapplied from its source-trail chip. The transcript retains the authored dialogue, and the findings rail retains the supersession trail, so contradictory claims are never silently hidden.
 
-`frontend/src/tao/engine/confidence.ts` adds a pure
-`evidenceConfidence(scored, state)` that reports how much evidence has
-accumulated rather than how high the top probability is. The primary signal is
-the **count of asserted + negated findings**, mapped through named thresholds
-(`CONFIDENCE_THRESHOLDS`: low `< 3`, medium `3–5`, high `>= 6`). A clear top-two
-margin (`>= CLEAR_LEADER_MARGIN`) may promote `medium → high` but never rescues a
-thin `low` state. It returns `{ findingsCount, level, topMargin, caption }`, with
-`caption` of the form "based on N findings — low/medium/high confidence". The
-effect: an early high probability on one or two findings deliberately reads as
-**low** confidence, reinforcing "decision support, not a diagnosis".
+## Evidence coverage
 
-### DEV self-check
+Evidence coverage replaces confidence language. It is a deterministic demo heuristic over the fraction of scenario-relevant findings answered plus the fraction of scenario-relevant findings explicitly authored with `safetyCue: true` that have been checked. Safety metadata is conservative and independent of condition weights: a benign discriminator does not become a safety cue merely because a can't-miss condition uses it. It reports low/medium/high and visibly supports that label with answered count, explicit safety-cue count, and top-two evidence-share margin. It is explicitly not clinical certainty.
 
-`frontend/src/tao/engine/selfcheck.ts` exports `runEngineSelfCheck()`, a
-DEV-only (`import.meta.env?.DEV`, `console.warn` on failure, never throws)
-assertion of the new invariants: `suggestNextQuestion` is deterministic and
-never returns an already-asked finding, and a one-finding state reads lower
-confidence than a fully-played one. It is wired to run once from `TaoApp`.
+## Playback and transcript
 
-## No-key design
+`TranscriptPlayer` is presentation-agnostic deterministic code with elapsed and total time, pause/resume, 1×/2× speed, next-evidence stepping, restart, and timer disposal. Next-evidence reveals all dialogue through the next finding-bearing turn and pauses. Once no later evidence exists, it consumes any trailing dialogue, advances elapsed time and progress to 100%, and enters Complete with controls disabled. Before playback the transcript presents the case briefing; during playback it identifies itself as a scripted demo, highlights the latest turn, and shows evidence chips.
 
-- **Bundled curated DEMO dataset** (`frontend/src/tao/data/`): fictional patient,
-  conditions, findings, and references. No real PII.
-- **PubMed E-utilities as progressive enhancement** (`frontend/src/tao/pubmed.ts`):
-  unauthenticated `esearch`/`esummary`, short timeout, every failure resolves to
-  an empty list so the UI falls back to the bundled references. Rendering never
-  blocks on the network.
-- **Scripted consultation playback** (`frontend/src/tao/engine/player.ts`): a
-  timed transcript drives the full demo offline with no live input. The player's
-  duration is derived generically from the loaded script so any scenario runs to
-  completion.
-- **Optional Web Speech mic**: guarded in try/catch; a missing or blocked API
-  never throws.
+The optional Web Speech path is fully guarded and has idle/requesting/listening/error lifecycle states. Recognized speech is appended as **unreviewed, transcript-only** text and never changes ranking. This deliberately avoids silent extraction errors.
 
-## Scenarios registry
+## Citations and offline behavior
 
-`frontend/src/tao/data/scenarios.ts` exports a typed `Scenario { id, title,
-description, consultation, conditionPool? }`, the list `scenarios`, a
-`defaultScenarioId` (`chest_pain`), a `scenariosById` lookup, and a generic
-`scenarioDurationMs(turns)`. Three scenarios ship:
+Bundled citation metadata always renders. Opening external sources requires a connection. Live PubMed is progressive enhancement only: requests are cached by query, use short timeouts, never block rendering, and resolve to `[]` on every failure. No network response affects scoring or control flow.
 
-- **`chest_pain`** — reuses the existing `consultation.ts` chest-pain → ACS
-  script (left intact for backward compatibility).
-- **`headache`** — a headache trending to migraine while the doctor probes and
-  the patient denies the red-flag features, so the can't-miss subarachnoid
-  hemorrhage and meningitis stay on the radar then recede. Scores against a
-  headache-specific `conditionPool` (migraine, tension headache, subarachnoid
-  hemorrhage, meningitis, giant cell arteritis), each with ≥2 real references.
-- **`late_twist`** — an anti-anchoring case that looks like reflux early, then a
-  late finding (exertional onset, radiation to the arm, diaphoresis) reshuffles
-  the board toward ACS.
+## Accessibility and motion
 
-New conditions and findings were added to `data/conditions.ts` and
-`data/findings.ts` consistent with the existing model; every
-`revealsFindings` / `negatesFindings` id resolves in `findings.ts` (enforced by
-`tsc -b` strict and the DEV unknown-id check).
-
-## UI surfaces
-
-The board column reads top-to-bottom as headline intelligence, with the
-transcript in the right column:
-
-- **Suggested next question** (`components/NextQuestion.tsx`) — renders the
-  `suggestNextQuestion` result prominently with its why-explanation, updates
-  live, and shows a calm null state when nothing discriminating remains.
-- **Confidence / certainty meter** (`components/ConfidenceMeter.tsx`) — renders
-  the `evidenceConfidence` result as "based on N findings — low/medium/high"
-  with a small graphical scale colored via the semantic tokens.
-- **Findings chips rail** (`components/FindingsRail.tsx`) — a live two-column
-  strip of **present** (green) vs **ruled out** (muted rose) findings derived
-  from the player's asserted/negated sets (plus any live-mic asserted).
-- **Probability board + cards** (`components/ProbabilityBoard.tsx`,
-  `ProbabilityCard.tsx`) — the cinematic live reshuffle: a hand-rolled FLIP
-  reorder (no animation library), a one-shot highlight **pulse** on cards that
-  changed meaningfully, a signed **delta badge**, and a brief visual **link**
-  between the triggering transcript line and the moved card. The card still
-  floors the bar width at `Math.max(2, prob*100)` and forces a distinct
-  critical/red accent + can't-miss badge so emergencies never visually vanish.
-- **Condition detail** (`components/ConditionDetail.tsx`) — the explainable
-  "why" (Raised by / Lowered by) plus sources, with the live PubMed layer shown
-  behind a tasteful shimmer while loading and still falling back to bundled
-  references (and `[]` on any failure).
-- **Scenario selector** (in `TaoApp.tsx`) — a clean header dropdown that
-  switches scenarios, rebuilds the player, resets playback, and scores against
-  the selected scenario's condition pool.
+The detail dialog has labelled/described relationships, Escape handling, focus containment/restoration, backdrop close, and body scroll lock. Rank changes are announced through a concise polite live region. Changed-card and microphone-recording animations use separate classes. All motion is disabled under `prefers-reduced-motion`.
 
 ## Design system
 
-A single disciplined direction, **"Boardroom Navy"**, is defined as Tailwind
-design tokens in `frontend/tailwind.config.js` (documented in a top-of-file
-comment) and applied consistently to every surface. It is a refined deep-navy
-executive-analytics palette: calm, authoritative, data-dense but uncluttered,
-with strong typographic hierarchy and restrained color.
+TAO uses a scoped light consulting/clinical system under `.tao-shell`: warm white and pale blue surfaces, strong navy typography, one cobalt accent, emergency red, and distinct green/purple evidence states. Thin rules, restrained elevation, compact tabular metrics, and bounded panel scrolling replace the previous vertically expanded dark dashboard. The shared HTML uses neutral fallback metadata. `frontend/src/main.tsx` assigns a local data-URI favicon and title by route before rendering: TAO for the default route, and Benchwatch for both query routes. No browser branding depends on the network.
 
-Color **encodes meaning, never decoration**, via semantic token ramps:
+## Source map
 
-- `brand` (sapphire) — the primary ranked signal / focus; the leading condition
-  and near-leaders read hottest, long-shots recede into muted `ink`.
-- `critical` (red) — reserved for can't-miss / emergency risk tier so it stays
-  visually distinct and prominent.
-- `present` (green) vs `denied` (muted rose) — asserted vs ruled-out findings.
-- `ink` foundation ramp + `surface` / `hairline` / `content` semantic aliases
-  for the canvas, cards, borders, and text.
-
-Typography uses an intentional Inter + system/ui sans stack (no network
-`@import` web font, offline-first), a mono stack and tabular numerals for all
-numeric/probability figures, a `stat` size for headline figures, subtle
-elevation (no neon glows), and short, purposeful animations — `pulse` (card
-change), `shimmer` (PubMed loading), and `rise-in` (new findings/cards).
-`frontend/src/index.css` applies the foundation background + text via
-`@layer base`, a brand focus-visible ring, and a `prefers-reduced-motion` block
-that neutralizes all animation/transition durations.
-
-## Coexistence with Benchwatch
-
-TAO is additive and lives entirely under `frontend/src/tao/`.
-`frontend/src/main.tsx` defaults to TAO and keeps Benchwatch reachable at
-`?benchwatch=1` (offline replay) and `?live=1` (live WebSocket dashboard). The
-Benchwatch backend and frontend are unchanged.
-
-## Deployment
-
-TAO is the committed GitHub Pages artifact in `docs/`, served under the Vite base
-`/hackaton/` at https://jamesboteng.github.io/hackaton/. See `docs/DEPLOY.md`.
+- Orchestration: `frontend/src/tao/TaoApp.tsx`
+- Scoring: `frontend/src/tao/engine/score.ts`
+- Information gap: `frontend/src/tao/engine/nextQuestion.ts`
+- Coverage: `frontend/src/tao/engine/confidence.ts`
+- Playback: `frontend/src/tao/engine/player.ts`
+- Curated data: `frontend/src/tao/data/`
+- Progressive PubMed layer: `frontend/src/tao/pubmed.ts`
+- TAO-scoped visual system: `frontend/src/index.css`

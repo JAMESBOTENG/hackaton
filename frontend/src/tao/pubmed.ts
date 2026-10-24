@@ -34,6 +34,7 @@ const ESUMMARY =
 
 /** How long to wait before giving up on PubMed, in ms. Kept short on purpose. */
 const TIMEOUT_MS = 4000;
+const citationCache = new Map<string, Promise<PubMedCitation[]>>();
 
 /**
  * Fetch a few recent PubMed citations for a free-text query. Resolves to an
@@ -46,18 +47,23 @@ export async function fetchPubMedCitations(
   query: string,
   retmax = 3
 ): Promise<PubMedCitation[]> {
-  if (!query.trim()) return [];
-  // No fetch available (very old runtime / SSR) — bail out quietly.
+  const normalized = query.trim();
+  if (!normalized) return [];
   if (typeof fetch !== "function") return [];
-
-  try {
-    const ids = await esearch(query, retmax);
-    if (ids.length === 0) return [];
-    return await esummary(ids);
-  } catch {
-    // Any failure at all: silently fall back to bundled references.
-    return [];
-  }
+  const key = `${normalized.toLowerCase()}::${retmax}`;
+  const cached = citationCache.get(key);
+  if (cached) return cached;
+  const request = (async () => {
+    try {
+      const ids = await esearch(normalized, retmax);
+      if (ids.length === 0) return [];
+      return await esummary(ids);
+    } catch {
+      return [];
+    }
+  })();
+  citationCache.set(key, request);
+  return request;
 }
 
 /** Resolve a query to a list of PMIDs via esearch. Throws on any failure. */

@@ -28,6 +28,9 @@ export interface ConsultationTurn {
   speaker: Speaker;
   /** Spoken line shown in the transcript panel. */
   text: string;
+  source?: "scripted" | "microphone";
+  /** Optional marker for microphone text that has not been clinically reviewed. */
+  unreviewed?: boolean;
   /** Finding ids this turn asserts as present. */
   revealsFindings?: string[];
   /** Finding ids this turn explicitly denies / rules out. */
